@@ -91,23 +91,20 @@ Seniority score weights:
 File layout:
 
 ```text
-lib/scoring/
-├─ constants.ts
-├─ energy.ts
-├─ health.ts
-├─ seniority.ts
-├─ tags.ts
-├─ types.ts
+features/scoring/
+├─ domain/
+├─ application/
+├─ tests/
 └─ index.ts
-lib/quests/
-├─ definitions.ts
-├─ progress.ts
-├─ rewards.ts
+features/quests/
+├─ domain/
+├─ application/
+├─ tests/
 └─ index.ts
-lib/powerups/
-├─ inventory.ts
-├─ effects.ts
-├─ usePowerUp.ts
+features/powerups/
+├─ domain/
+├─ application/
+├─ tests/
 └─ index.ts
 ```
 
@@ -119,9 +116,9 @@ export {
   calculateHealth,
   calculateSeniorityScore,
   normalizeTag,
-} from "@/lib/scoring";
-export { generateQuests, calculateQuestProgress, claimQuestReward } from "@/lib/quests";
-export { addPowerUp, usePowerUp, consumeMatchingEffect } from "@/lib/powerups";
+} from "@/features/scoring";
+export { generateQuests, calculateQuestProgress, claimQuestReward } from "@/features/quests";
+export { addPowerUp, usePowerUp, consumeMatchingEffect } from "@/features/powerups";
 ```
 
 ## 13.7 What this does not do

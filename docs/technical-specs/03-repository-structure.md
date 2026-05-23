@@ -12,7 +12,8 @@
 │  │  │  └─ page.tsx
 │  │  ├─ register/
 │  │  │  └─ page.tsx
-│  │  └─ actions.ts
+│  │  ├─ actions.ts
+│  │  └─ require-user.ts
 │  ├─ dashboard/
 │  │  ├─ actions.ts
 │  │  └─ page.tsx
@@ -35,18 +36,37 @@
 │  │        └─ route.ts
 │  ├─ globals.css
 │  └─ layout.tsx
-├─ components/
-│  ├─ dashboard/
-│  ├─ duck/
-│  ├─ marketing/
-│  ├─ settings/
+├─ features/
+│  ├─ auth/
+│  │  ├─ application/
+│  │  ├─ domain/
+│  │  ├─ infrastructure/
+│  │  ├─ presentation/
+│  │  ├─ tests/
+│  │  └─ index.ts
 │  ├─ share/
+│  │  ├─ application/
+│  │  ├─ domain/
+│  │  ├─ infrastructure/
+│  │  ├─ presentation/
+│  │  ├─ tests/
+│  │  └─ index.ts
+│  └─ <slice>/
+│     ├─ application/
+│     ├─ domain/
+│     ├─ infrastructure/
+│     ├─ presentation/
+│     ├─ tests/
+│     └─ index.ts
+├─ components/
+│  ├─ duck/
 │  └─ ui/
 ├─ lib/
 │  ├─ activity/
 │  ├─ dailydev/
 │  ├─ db/
 │  │  ├─ migrations/
+│  │  ├─ repositories/
 │  │  ├─ seeds/
 │  │  ├─ client.ts
 │  │  ├─ migrate.ts
@@ -58,8 +78,6 @@
 │  ├─ quests/
 │  ├─ scoring/
 │  ├─ security/
-│  ├─ auth/
-│  ├─ share/
 │  ├─ speech/
 │  └─ users/
 ├─ tests/
@@ -86,34 +104,24 @@
 
 ## 3.2 Folder purposes
 
-| Path                       | Purpose                                                                                   |
-| -------------------------- | ----------------------------------------------------------------------------------------- |
-| `app/`                     | Next.js App Router pages, route handlers, layouts, and route-local server actions.        |
-| `app/(marketing)/page.tsx` | Landing page at `/`.                                                                      |
-| `app/auth/`                | Registration, login, logout, and account-auth server actions.                             |
-| `app/dashboard/`           | Auth-required dashboard surface and dashboard mutations.                                  |
-| `app/settings/`            | Token connection, disconnect, demo mode, and reset demo state.                            |
-| `app/share/[snapshotId]/`  | Public privacy-safe share snapshot page.                                                  |
-| `app/api/`                 | REST contracts for health, reset, daily.dev connection test, and share snapshot creation. |
-| `components/duck/`         | SVG duck avatar variants and motion wrappers.                                             |
-| `components/ui/`           | Reusable presentational primitives.                                                       |
-| `lib/scoring/`             | Pure energy, health, seniority, and tag-normalization logic.                              |
-| `lib/quests/`              | Pure quest generation, progress, and rewards.                                             |
-| `lib/powerups/`            | Pure inventory, active effect, and power-up use logic.                                    |
-| `lib/activity/`            | Activity event normalization and recording.                                               |
-| `lib/dailydev/`            | daily.dev API client and response mapping.                                                |
-| `lib/security/`            | Token encryption, password hashing helpers, JWT signing, and request hardening helpers.   |
-| `lib/auth/`                | Account registration, login, session validation, role checks, and logout orchestration.   |
-| `lib/db/`                  | Drizzle client, schema, migrations, seeds, and repositories.                              |
-| `lib/demo/`                | Demo personas and simulation actions.                                                     |
-| `lib/share/`               | Share snapshot creation and public projection.                                            |
-| `lib/speech/`              | Deterministic speech bubble template selection.                                           |
-| `lib/operations/`          | Health dependency checks and reset orchestration.                                         |
-| `tests/unit/`              | Vitest tests for pure modules and route contracts where possible.                         |
-| `tests/e2e/`               | Playwright golden path tests.                                                             |
-| `docs/technical-specs/`    | This numbered technical spec set.                                                         |
-| `docs/api-specs/`          | Future endpoint contracts for task cards and review.                                      |
+| Path                               | Purpose                                                                                                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `app/`                             | Next.js App Router pages, route handlers, layouts, and route-local server actions. These files adapt HTTP, cookies, redirects, and rendering to feature APIs. |
+| `app/api/`                         | REST contracts for health, reset, daily.dev connection test, and share snapshot creation.                                                                     |
+| `features/<slice>/`                | Product-owned vertical slice with clean architecture layers and a public `index.ts`.                                                                          |
+| `features/<slice>/domain/`         | Pure domain state, value objects, finite-state rules, calculations, and privacy projections.                                                                  |
+| `features/<slice>/application/`    | Use cases, `ports.ts`, command/query handlers, result unions, and slice-level request schemas.                                                                |
+| `features/<slice>/infrastructure/` | Runtime wiring and adapters that implement application ports through external APIs, session/token services, and `lib/db` repositories.                        |
+| `features/<slice>/presentation/`   | Feature-owned React components, view models, and UI mappers.                                                                                                  |
+| `features/<slice>/tests/`          | Co-located unit and integration-style tests for the slice domain, application, and presentation adapters.                                                     |
+| `components/duck/`                 | Shared duck avatar variants used by multiple surfaces. Move here only while reused across slices.                                                             |
+| `components/ui/`                   | Reusable presentation-only primitives.                                                                                                                        |
+| `lib/db/`                          | Drizzle client, schema, migrations, seeds, and low-level repositories.                                                                                        |
+| `lib/security/`                    | Cross-cutting security primitives that are not owned by one product slice.                                                                                    |
+| `tests/e2e/`                       | Playwright golden path tests that cross feature and route boundaries.                                                                                         |
+| `docs/technical-specs/`            | This numbered technical spec set.                                                                                                                             |
+| `docs/api-specs/`                  | Endpoint contracts for task cards and review.                                                                                                                 |
 
 ## 3.3 File placement rule
 
-Domain rules live in `lib/<module>/` and must be independent of React. Page and component files consume typed view models and call server actions or REST endpoints. Database access stays behind `lib/db/` repositories.
+Product behavior belongs in `features/<slice>/` and follows the layer dependency rules in `02-system-architecture.md`. `app/` files call public feature exports and do not contain business rules. Direct database access stays under `lib/db/`; feature application code reaches persistence through ports, repositories, or infrastructure adapters.

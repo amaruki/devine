@@ -41,21 +41,22 @@ app/dashboard/        Auth-required dashboard and dashboard mutations
 app/settings/         Token connection, demo mode, reset demo state
 app/share/[snapshotId]/ Public share snapshot route
 app/api/              REST contracts for health, reset, daily.dev, share snapshots
-components/           Route components and reusable UI primitives
+features/<slice>/     Vertical slices with domain, application, infrastructure, presentation, tests
+features/activity/    Activity normalization and recording
+features/auth/        Registration, login, sessions, roles, logout
+features/dailydev/    daily.dev API client and response mapping
+features/demo/        Demo personas and simulation actions
+features/operations/  Health checks and reset orchestration
+features/powerups/    Inventory, active effects, power-up use
+features/quests/      Quest generation, progress, rewards
+features/scoring/     Energy, health, seniority, tag normalization
+features/share/       Share snapshot creation and public projection
+features/speech/      Deterministic speech templates
+features/users/       User domain boundary
+components/           Shared route components and reusable UI primitives
 components/ui/        Presentation-only primitives
-lib/activity/         Activity normalization and recording
-lib/auth/             Registration, login, sessions, roles, logout
-lib/dailydev/         daily.dev API client and response mapping
 lib/db/               Drizzle client, schema, migrations, seeds, repositories
-lib/demo/             Demo personas and simulation actions
-lib/operations/       Health checks and reset orchestration
-lib/powerups/         Inventory, active effects, power-up use
-lib/quests/           Quest generation, progress, rewards
-lib/scoring/          Energy, health, seniority, tag normalization
-lib/security/         Token encryption, password hashing, JWT helpers
-lib/share/            Share snapshot creation and public projection
-lib/speech/           Deterministic speech templates
-tests/unit/           Unit tests for pure modules and route contracts
+lib/security/         Cross-cutting security primitives
 tests/e2e/            Playwright golden paths
 docs/                 Business, technical, API, workflow docs
 scripts/              Repository helper scripts
@@ -101,11 +102,13 @@ Hard domain states:
 
 ## Architecture laws
 
-- Keep domain rules in `lib/<module>/` and independent of React, Next page modules, and components.
-- Keep route handlers and server actions thin: validate input, authorize caller, call `lib/` services, map results.
+- Put new product behavior in `features/<slice>/` with domain, application, infrastructure, presentation, and tests layers.
+- Keep domain rules in `features/<slice>/domain/` and independent of React, Next page modules, Drizzle, cookies, environment variables, and network clients.
+- Keep route handlers and server actions thin: validate input, authorize caller, call public feature APIs, map results.
 - Put all direct database access, Drizzle clients, schema, migrations, seeds, and repositories under `lib/db/`.
-- Use repositories or service functions outside `lib/db/`; do not import `db` elsewhere.
-- Import feature modules through public entry points such as `@/lib/scoring`, not private implementation files.
+- Use repositories, ports, or infrastructure adapters outside `lib/db/`; do not import `db` elsewhere.
+- Import migrated feature modules through public entry points such as `@/features/auth` and `@/features/share`, not private implementation files.
+- Keep slice tests under `features/<slice>/tests/`; keep `tests/e2e/` for cross-slice browser flows.
 - Keep `components/ui/` presentation-only. They must not fetch data or mutate state.
 - Keep application source files under 300 lines. Split proactively at 250 lines.
 - Split large files into a sibling feature folder or focused module. Keep entry points thin and avoid generic `utils` dumps.
@@ -180,7 +183,7 @@ bun run build
 
 ## Testing
 
-- Put unit tests in `tests/unit/` and E2E tests in `tests/e2e/`.
+- Put slice tests in `features/<slice>/tests/` and E2E tests in `tests/e2e/`.
 - Use Arrange, Act, Assert form.
 - Test every acceptance-criterion path that changes behavior.
 - Cover success, expected failure, authorization boundaries, privacy projection, idempotency, and persistence side effects.
@@ -265,8 +268,8 @@ After compaction or handoff, verify these invariants before editing:
 - [ ] Bun is the only package and script runner.
 - [ ] `bun run complete-check` is the full merge gate.
 - [ ] Source files stay under 300 lines and split at 250.
-- [ ] Domain logic stays in `lib/<module>/`, independent of React.
-- [ ] Database access stays behind `lib/db/` repositories or services.
+- [ ] Domain logic stays in `features/<slice>/domain/`, independent of React.
+- [ ] Database access stays behind `lib/db/` repositories, feature ports, or infrastructure adapters.
 - [ ] Users have roles `user` or `superadmin`.
 - [ ] User modes transition between `demo` and `connected` only.
 - [ ] Health states include `hibernating`, not permanent death.

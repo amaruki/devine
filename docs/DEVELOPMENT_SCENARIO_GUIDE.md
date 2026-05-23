@@ -93,13 +93,13 @@ Use this for persistence, domain logic, route handlers, server actions, auth, da
 
 3. Read the relevant module spec in [docs/technical-specs/05-module-definitions.md](docs/technical-specs/05-module-definitions.md).
 
-4. Add or update unit tests in `tests/unit/` for pure behavior, route contracts, validation, authorization, idempotency, and privacy boundaries.
+4. Add or update slice tests in `features/<slice>/tests/`.
 
-5. Implement domain logic under the relevant `lib/<module>/` folder.
+5. Implement product behavior under the relevant `features/<slice>/` layer.
 
 6. Keep direct database access in `lib/db/`.
 
-7. Keep route handlers and server actions thin. They should validate input, authorize the caller, call services, and map results to responses.
+7. Keep route handlers and server actions thin. They should validate input, authorize the caller, call public feature APIs, and map results to responses.
 
 8. Run focused checks.
 

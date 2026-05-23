@@ -115,27 +115,28 @@ app/dashboard/          Dashboard page and server actions
 app/settings/           Settings page and server actions
 app/share/[snapshotId]/ Public share snapshot page
 app/api/                Route handlers for health, reset, daily.dev, and share APIs
-components/             UI and duck components
+features/<slice>/       Vertical slice with domain, application, infrastructure, presentation, tests
+features/auth/          Auth contracts and scaffold behavior
+features/share/         Share snapshot contracts
+components/             Shared UI and duck components
 components/duck/        Duck avatar presentation
 components/ui/          Reusable presentation primitives
 docs/business/          Requirements, user stories, and acceptance criteria
 docs/api-specs/         API and server-action contracts
 docs/technical-specs/   Architecture, modules, data model, security, and integration specs
-lib/                    Domain and service modules
-lib/activity/           Activity normalization boundary
-lib/auth/               Auth contracts and scaffold behavior
-lib/dailydev/           daily.dev client and DTO types
+features/activity/      Activity normalization boundary
+features/auth/          Auth contracts and scaffold behavior
+features/dailydev/      daily.dev client and DTO types
+features/demo/          Demo mode boundary
+features/operations/    Health and reset operations
+features/powerups/      Power-up engine boundary
+features/quests/        Quest engine boundary
+features/scoring/       Scoring types and scoring engine boundary
+features/share/         Share snapshot contracts
+features/speech/        Speech bubble boundary
+features/users/         User domain boundary
 lib/db/                 Drizzle client, schema, migrations, and seed scripts
-lib/demo/               Demo mode boundary
-lib/operations/         Health and reset operations
-lib/powerups/           Power-up engine boundary
-lib/quests/             Quest engine boundary
-lib/scoring/            Scoring types and scoring engine boundary
 lib/security/           Security helper boundary
-lib/share/              Share snapshot contracts
-lib/speech/             Speech bubble boundary
-lib/users/              User domain boundary
-tests/unit/             Bun unit tests
 tests/e2e/              Playwright tests
 ```
 

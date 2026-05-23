@@ -109,11 +109,11 @@ Rationale: TypeScript stays idiomatic while Postgres names remain conventional a
 
 ## 3. Project Structure and Layering
 
-### 3.1 Keep domain rules in `lib/<module>/` and independent of React.
+### 3.1 Keep domain rules in `features/<slice>/domain/` and independent of frameworks.
 
-Domain logic lives under `lib/scoring`, `lib/quests`, `lib/powerups`, `lib/activity`, `lib/share`, `lib/auth`, `lib/security`, `lib/demo`, `lib/speech`, and `lib/operations`. These modules do not import React, Next page modules, or components.
+Product behavior lives under `features/<slice>/` using clean architecture layers. Domain logic goes in `features/<slice>/domain/` and does not import React, Next page modules, Drizzle, cookies, environment variables, or network clients.
 
-Rationale: domain behavior must be testable without rendering the app.
+Rationale: domain behavior must be testable without rendering the app or booting infrastructure.
 
 ```diff
 - import { DuckAvatar } from "@/components/duck/DuckAvatar";
@@ -125,7 +125,7 @@ Rationale: domain behavior must be testable without rendering the app.
 
 ### 3.2 Keep route handlers and server actions thin.
 
-Route handlers and server actions validate input, authorize the caller, call `lib/` services, and map results to responses or redirects. They do not contain scoring, quest, token, or persistence rules.
+Route handlers and server actions validate input, authorize the caller, call public feature APIs, and map results to responses or redirects. They do not contain scoring, quest, token, or persistence rules.
 
 Rationale: App Router files are boundaries, not business-rule containers.
 
@@ -169,14 +169,20 @@ Rationale: primitives such as `Card` must stay safe to reuse in any route.
 
 ### 3.5 Do not import module internals across features.
 
-Cross-feature imports use the feature public entry point, usually `@/lib/<module>` or a named service function, not private implementation files.
+Cross-feature imports use the feature public entry point, usually `@/features/<slice>`, not private implementation files.
 
 Rationale: feature modules must remain movable and reviewable as implementation grows.
 
 ```diff
-- import { validateDailyDevToken } from "@/lib/dailydev/client";
-+ import { validateDailyDevToken } from "@/lib/dailydev";
+- import { createPublicShareId } from "@/features/share/domain/public-id";
++ import { createPublicShareId } from "@/features/share";
 ```
+
+### 3.6 Co-locate slice tests with the feature.
+
+Unit and integration-style tests for a slice live under `features/<slice>/tests/`. Keep `tests/e2e/` for Playwright flows that cross routes and slices.
+
+Rationale: tests are part of the slice contract and should move with the feature.
 
 ## 4. File and Function Size
 
@@ -187,10 +193,10 @@ Keep application source files under 300 lines. When a file approaches 250 lines,
 Rationale: small files are easier to review, test, and navigate.
 
 ```diff
-- lib/share/index.ts        # 420 lines of validation, projection, and database code
-+ lib/share/index.ts        # public exports
-+ lib/share/projection.ts   # public snapshot projection
-+ lib/share/repository.ts   # database persistence
+- features/share/index.ts                    # 420 lines of validation, projection, and database code
++ features/share/index.ts                    # public exports
++ features/share/domain/public-projection.ts # public snapshot projection
++ lib/db/share-snapshots.ts                  # database persistence
 ```
 
 ### 4.2 Keep exported functions focused on one operation.
@@ -340,15 +346,15 @@ Rationale: the aggregate command covers type checking, linting, formatting, unit
 
 ## 8. Tests
 
-### 8.1 Put unit tests in `tests/unit/` and E2E tests in `tests/e2e/`.
+### 8.1 Co-locate migrated slice tests and keep E2E tests in `tests/e2e/`.
 
-Use Bun unit tests for pure modules and route-contract logic. Use Playwright for user-visible golden paths.
+Use Bun tests under `features/<slice>/tests/` for slice domain, application, and presentation-adapter logic. Use Playwright for user-visible golden paths.
 
-Rationale: fast tests cover domain behavior while Playwright verifies the real app surface.
+Rationale: fast tests cover slice behavior beside the code they protect while Playwright verifies the real app surface.
 
 ```diff
 - app/dashboard/dashboard.test.ts
-+ tests/unit/dashboard.test.ts
++ features/dashboard/tests/dashboard.test.ts
 + tests/e2e/dashboard.spec.ts
 ```
 
@@ -385,7 +391,7 @@ Mock daily.dev, time, and database clients at the deepest practical boundary. Do
 Rationale: mocks should isolate external nondeterminism, not hide integration bugs inside the app.
 
 ```diff
-- mock.module("@/lib/scoring", () => ({ calculateScore: () => 10 }));
+- mock.module("@/features/scoring", () => ({ calculateScore: () => 10 }));
 + mockDailyDevResponse({ posts: [] });
 ```
 

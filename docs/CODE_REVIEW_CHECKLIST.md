@@ -46,7 +46,7 @@ Use this checklist for every PR. CI-covered items are marked **(CI)** so manual 
 
 ## Tests and Verification
 
-- [ ] Unit tests are in `tests/unit/` and Playwright E2E tests are in `tests/e2e/`. See `CODING_STANDARD.md` §8.1.
+- [ ] Slice tests are in `features/<slice>/tests/`, and Playwright E2E tests are in `tests/e2e/`. See `CODING_STANDARD.md` §8.1.
 - [ ] Tests follow Arrange, Act, Assert and assert focused observable behavior. See `CODING_STANDARD.md` §8.2.
 - [ ] Behavior changes include tests for success, expected failure, authorization, privacy, and persistence paths where relevant. See `CODING_STANDARD.md` §8.3.
 - [ ] Mocks are only at external boundaries such as daily.dev, time, or database clients. See `CODING_STANDARD.md` §8.4.

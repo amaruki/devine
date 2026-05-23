@@ -61,10 +61,13 @@ The response returns profile metadata and connection status only. It never retur
 File layout:
 
 ```text
-lib/dailydev/
-├─ client.ts
-├─ mapper.ts
-├─ types.ts
+features/dailydev/
+├─ application/
+│  └─ client.ts
+├─ domain/
+│  └─ types.ts
+├─ tests/
+│  └─ dailydev.test.ts
 └─ index.ts
 ```
 
@@ -76,7 +79,7 @@ export {
   fetchDailyDevProfile,
   fetchDailyDevFeed,
   fetchDailyDevBookmarks,
-} from "./client";
+} from "@/features/dailydev";
 export type { DailyDevProfile, DailyDevPost } from "./types";
 ```
 

@@ -11,7 +11,7 @@ Public surface:
 - `app/dashboard/actions.ts`
 - `app/settings/page.tsx`
 - `app/settings/actions.ts`
-- `components/dashboard/*`
+- `features/<slice>/presentation/*`
 - `components/duck/DuckAvatar.tsx`
 
 Owns no database entities.
@@ -23,14 +23,16 @@ Responsibility: register users, validate username and password input, hash passw
 Public surface:
 
 ```ts
+import { loginUser, logoutUser, registerUser } from "@/features/auth"
+
 registerUser(input: RegisterUserInput): Promise<AuthResult>
 loginUser(input: LoginInput): Promise<AuthResult>
-logoutUser(sessionId: string): Promise<void>
-requireUser(): Promise<AuthContext>
-requireSuperadmin(): Promise<AuthContext>
+logoutUser(sessionToken: string | undefined): Promise<void>
 ```
 
-Owns `users` and `sessions` through persistence repositories. Uses security helpers for Argon2id hashing and JWT signing.
+Route adapters expose `requireUser()` and `requireSuperadmin()` from `app/auth/require-user.ts` because they depend on Next.js redirects and cookies.
+
+Owns `users` and `sessions` through persistence repositories. Uses feature infrastructure for Argon2id hashing and JWT signing.
 
 ## 5.3 daily.dev Integration module
 
@@ -47,7 +49,7 @@ fetchDailyDevBookmarks(token: string): Promise<DailyDevPost[]>
 
 Owns no database entities. Uses token security for decryption and activity ingestion for mapping.
 
-## 5.3 Token Security module
+## 5.4 Token Security module
 
 Responsibility: encrypt, decrypt, validate metadata for, and delete daily.dev tokens. Serves US-03 and US-19.
 
@@ -61,7 +63,7 @@ deleteDailyDevConnection(userId: string): Promise<void>
 
 Owns `daily_dev_connections` through persistence repositories.
 
-## 5.4 Activity Ingestion module
+## 5.5 Activity Ingestion module
 
 Responsibility: normalize events from daily.dev API, Devine tracking, and demo mode. Serves US-06, US-12, US-16, and US-19.
 
@@ -74,7 +76,7 @@ recordActivity(userId: string, input: ActivityInput): Promise<ActivityEvent>
 
 Owns `activity_events` through persistence repositories.
 
-## 5.5 Scoring Engine module
+## 5.6 Scoring Engine module
 
 Responsibility: calculate energy, caps, health, missed-day decay, seniority score, seniority level, health state, and tag normalization. Serves US-06, US-07, US-08, US-16, and US-22.
 
@@ -90,7 +92,7 @@ normalizeTag(tag: string): string
 
 Owns no database entities.
 
-## 5.6 Quest Engine module
+## 5.7 Quest Engine module
 
 Responsibility: generate daily, personalized, and weekly quests, calculate progress, and define reward power-ups. Serves US-09, US-10, US-11, and US-16.
 
@@ -104,7 +106,7 @@ claimQuestReward(quest: Quest): PowerUpType
 
 Quests are static config for MVP unless persistence is needed for claimed state.
 
-## 5.7 Power-Up Engine module
+## 5.8 Power-Up Engine module
 
 Responsibility: add inventory, use power-ups, apply immediate effects, and create one-shot active multipliers. Serves US-10 and US-16.
 
@@ -118,7 +120,7 @@ consumeMatchingEffect(input: ConsumeEffectInput): ConsumeEffectResult
 
 Owns `power_up_inventory` and `active_power_up_effects` through persistence repositories.
 
-## 5.8 Speech Bubble module
+## 5.9 Speech Bubble module
 
 Responsibility: select deterministic product-tone copy from level, health, top tags, recent bookmarks, and weakest score area. Serves US-13.
 
@@ -130,7 +132,7 @@ selectSpeechBubble(input: SpeechContext): string
 
 Owns no database entities.
 
-## 5.9 Demo Mode module
+## 5.10 Demo Mode module
 
 Responsibility: provide persona presets and simulation actions that flow through activity, scoring, quests, and power-ups. Serves US-04, US-18, and US-20.
 
@@ -144,7 +146,7 @@ resetDemoState(userId: string, preset?: DemoPersonaKey): Promise<DashboardState>
 
 Owns no separate entities. Uses users, events, snapshots, inventory, and active effects.
 
-## 5.10 Persistence module
+## 5.11 Persistence module
 
 Responsibility: provide Drizzle schema, repositories, migrations, seeds, and database clients. Serves US-02, US-16, US-19, US-20, US-21, and US-22.
 
@@ -158,21 +160,27 @@ Public surface:
 
 Owns all database tables.
 
-## 5.11 Share Snapshot module
+## 5.12 Share Snapshot module
 
 Responsibility: create, render, and soft-delete static privacy-safe share snapshots. Serves US-14 and US-19.
 
 Public surface:
 
 ```ts
-createShareSnapshot(userId: string): Promise<ShareSnapshot>
-getPublicShareSnapshot(publicId: string): Promise<PublicShareSnapshot | DeletedShareSnapshot | null>
-softDeleteShareSnapshot(userId: string, publicId: string): Promise<void>
+import {
+  createShareSnapshot,
+  getPublicShareSnapshot,
+  softDeleteShareSnapshot,
+} from "@/features/share"
+
+createShareSnapshot(userId: string): Promise<CreateShareSnapshotResult>
+getPublicShareSnapshot(publicId: string): Promise<GetPublicShareSnapshotResult>
+softDeleteShareSnapshot(userId: string, publicId: string): Promise<DeleteShareSnapshotResult>
 ```
 
-Owns `share_snapshots` through persistence repositories.
+Owns `share_snapshots` through persistence repositories and exposes only privacy-safe public projections.
 
-## 5.12 Operations module
+## 5.13 Operations module
 
 Responsibility: health monitoring and non-production reset-state orchestration.
 
@@ -219,6 +227,6 @@ Response:
 }
 ```
 
-## 5.13 Shared-package usage
+## 5.14 Shared-package usage
 
-The MVP is a single app, not a workspace. Shared code lives in `lib/` modules. A future package split must preserve the public-surface rule and keep domain engines independent of React.
+The MVP is a single app, not a workspace. Product code lives in `features/<slice>/`; `lib/` is reserved for shared infrastructure such as database and cross-cutting security primitives. A future package split must preserve public feature entry points, co-located slice tests, and framework-independent domain layers.

@@ -2,7 +2,7 @@
 
 ## 2.1 Architectural style
 
-Devine uses a modular monolith in a single Next.js application. Modules are separated by folder boundaries and public interfaces, but they deploy as one Vercel app backed by Neon Postgres.
+Devine uses a vertical-slice modular monolith in a single Next.js application. Product features live under `features/<slice>/` with clean architecture layers, while Next.js `app/` files stay as thin HTTP, routing, and server-action adapters. The slices deploy together as one Vercel app backed by Neon Postgres.
 
 ## 2.2 Why this shape
 
@@ -13,23 +13,24 @@ A modular monolith fits the hackathon MVP because the product needs fast iterati
 ```mermaid
 graph TD
   Browser[Browser]
-  Next[Next.js App Router]
-  ServerActions[Server Actions]
-  RestRoutes[REST Route Handlers]
-  Domain[Domain Engines]
-  Persistence[Persistence Module]
+  App[Next.js App Router adapters]
+  Presentation[Feature presentation]
+  Application[Feature application use cases]
+  Domain[Feature domain rules]
+  Infrastructure[Feature infrastructure adapters]
+  Persistence[Persistence module]
   Neon[(Neon Postgres)]
   DailyDev[daily.dev Public API]
 
-  Browser --> Next
-  Next --> ServerActions
-  Next --> RestRoutes
-  ServerActions --> Domain
-  RestRoutes --> Domain
-  Domain --> Persistence
+  Browser --> App
+  App --> Presentation
+  App --> Application
+  Presentation --> Application
+  Application --> Domain
+  Application --> Infrastructure
+  Infrastructure --> Persistence
   Persistence --> Neon
-  RestRoutes --> DailyDev
-  ServerActions --> DailyDev
+  Infrastructure --> DailyDev
 ```
 
 ## 2.4 Request lifecycle
@@ -92,6 +93,21 @@ graph LR
 | Share Snapshot        | Static public snapshots                                  | `createShareSnapshot`, share route loader                                                      | Persistence                       |
 | Operations            | Health and reset endpoints                               | `GET /health`, `POST /admin/reset-state`                                                       | Persistence, migrations, seeds    |
 
-## 2.7 Cross-module call rule
+## 2.7 Clean architecture layers
 
-Modules import only from another module's public `index.ts` or documented public files. A module must not import another module's internal repositories, private components, or implementation files.
+Each product slice may contain these layers:
+
+| Layer          | Folder                             | Responsibility                                                                                            | Must not import                                                          |
+| -------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Domain         | `features/<slice>/domain/`         | Pure state, value objects, finite-state rules, calculations, and privacy projections.                     | React, Next.js, Drizzle, environment variables, cookies, network clients |
+| Application    | `features/<slice>/application/`    | Use cases, ports, command/query handlers, result unions, and slice request schemas.                       | Next.js route/page modules, React components, Drizzle client             |
+| Infrastructure | `features/<slice>/infrastructure/` | Port implementations, runtime wiring, external API adapters, token/session adapters, repository adapters. | `app/` route/page modules                                                |
+| Presentation   | `features/<slice>/presentation/`   | Feature-owned React components, view models, and UI mappers.                                              | Drizzle client and private internals from other slices                   |
+
+## 2.8 Cross-module call rule
+
+Feature-to-feature imports use the other feature's public `features/<slice>/index.ts` exports. `app/` may import public feature APIs and presentation components, but features must not import `app/`. A slice must not import another slice's private `domain`, `application`, `infrastructure`, or `presentation` files unless the exception is documented in this spec.
+
+## 2.9 Persistence boundary
+
+`lib/db/` remains the only place that creates Drizzle clients, defines schema, runs migrations, seeds data, or performs direct database queries. Feature application code depends on ports declared in `features/<slice>/application/ports.ts`; infrastructure adapters implement those ports by calling `lib/db/`.

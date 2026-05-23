@@ -67,10 +67,20 @@ export async function getPublicShareSnapshot(publicId: string): Promise<PublicSh
 File layout:
 
 ```text
-lib/share/
-├─ createSnapshot.ts
-├─ publicProjection.ts
-├─ types.ts
+features/share/
+├─ application/
+│  ├─ create-snapshot.ts
+│  ├─ delete-snapshot.ts
+│  ├─ get-public-snapshot.ts
+│  ├─ ports.ts
+│  └─ types.ts
+├─ domain/
+│  ├─ public-id.ts
+│  └─ public-projection.ts
+├─ infrastructure/
+│  ├─ repository.ts
+│  └─ service.ts
+├─ tests/
 └─ index.ts
 app/share/[snapshotId]/page.tsx
 app/api/share-snapshots/route.ts
@@ -79,8 +89,12 @@ app/api/share-snapshots/route.ts
 Locked public exports:
 
 ```ts
-export { createShareSnapshot, getPublicShareSnapshot } from "./publicProjection";
-export type { PublicShareSnapshot } from "./types";
+export {
+  createShareSnapshot,
+  getPublicShareSnapshot,
+  softDeleteShareSnapshot,
+} from "@/features/share";
+export type { PublicShareSnapshot } from "@/features/share";
 ```
 
 ## 14.6 What this does not do
