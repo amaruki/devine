@@ -1,4 +1,7 @@
+#!/bin/sh
+
 bunx lint-staged
 bun run lint
 bun run type-check
+bun run format:write
 bun run test
