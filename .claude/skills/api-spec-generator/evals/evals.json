@@ -1,0 +1,23 @@
+{
+  "skill_name": "api-spec-generator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Generate an API spec from this business requirement: users can create orders, list their own orders with pagination, view order details, and cancel an order only while it is still pending. Admins can view all orders. The frontend team needs exact request/response examples and OpenAPI 3.1 snippets.",
+      "expected_output": "An enterprise API spec with scoped endpoints, auth rules, success envelopes, paginated list response, RFC 7807 errors, status code map, request ID/tracing, rate-limit notes, and OpenAPI 3.1 schemas.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Create REST API documentation for a wallet transfer feature. Business rules: a user can transfer balance to another user by username, amount must be positive, duplicate idempotency keys must not double-charge, insufficient balance should be a user-facing failure, and transfers are processed asynchronously by a payment provider.",
+      "expected_output": "A spec covering async 202 behavior, idempotency, semantic validation, conflict handling, dependency failures, secure response fields, Problem Details errors, headers including X-Request-ID and rate-limit headers, and OpenAPI 3.1 components.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Turn these acceptance criteria into an API spec: public visitors can submit a contact form with name, email, topic, and message; authenticated support agents can list submissions by topic and status; agents can mark a submission resolved; spammy clients should be rate limited. We want path versioning and enterprise-style error handling.",
+      "expected_output": "A complete API spec with public and authenticated endpoint boundaries, field validation, list pagination/filtering, 204 or success response for resolving, 429 problem response, /api/v1 paths, correlation IDs, and OpenAPI 3.1 snippets.",
+      "files": []
+    }
+  ]
+}
