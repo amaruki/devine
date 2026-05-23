@@ -1,27 +1,76 @@
 "use server";
 
-export type AuthActionResult = {
-  status: "not_implemented";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import {
+  isSecureSessionCookie,
+  loginUser,
+  logoutUser,
+  registerUser,
+  sessionCookieName,
+  type AuthErrorCode,
+  type AuthSuccess,
+} from "@/lib/auth";
+
+export type AuthActionState = {
+  status: "idle" | "error";
   message: string;
+  code?: AuthErrorCode;
 };
 
-export async function registerAccount(): Promise<AuthActionResult> {
-  return {
-    status: "not_implemented",
-    message: "Registration will be implemented in Sprint 1.",
-  };
+const idleState: AuthActionState = { status: "idle", message: "" };
+
+export async function registerAccount(
+  _previousState: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const result = await registerUser({
+    username: String(formData.get("username") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    password: String(formData.get("password") ?? ""),
+    timezone: String(formData.get("timezone") ?? "UTC"),
+  });
+  if (result.status === "error") {
+    return { status: "error", message: result.message, code: result.code };
+  }
+  await setSessionCookie(result);
+  redirect(result.redirectTo);
 }
 
-export async function loginAccount(): Promise<AuthActionResult> {
-  return {
-    status: "not_implemented",
-    message: "Login will be implemented in Sprint 1.",
-  };
+export async function loginAccount(
+  _previousState: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const result = await loginUser({
+    username: String(formData.get("username") ?? ""),
+    password: String(formData.get("password") ?? ""),
+  });
+  if (result.status === "error") {
+    return { status: "error", message: result.message, code: result.code };
+  }
+  await setSessionCookie(result);
+  redirect(result.redirectTo);
 }
 
-export async function logoutAccount(): Promise<AuthActionResult> {
-  return {
-    status: "not_implemented",
-    message: "Logout will be implemented in Sprint 1.",
-  };
+export async function logoutAccount(): Promise<void> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(sessionCookieName)?.value;
+  await logoutUser(token);
+  cookieStore.delete(sessionCookieName);
+  redirect("/");
+}
+
+export function getIdleAuthState(): AuthActionState {
+  return idleState;
+}
+
+async function setSessionCookie(result: AuthSuccess): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.set(sessionCookieName, result.sessionToken, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: isSecureSessionCookie(),
+    expires: result.expiresAt,
+    path: "/",
+  });
 }

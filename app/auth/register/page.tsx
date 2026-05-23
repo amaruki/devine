@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { RegisterForm } from "./RegisterForm";
 
 export default function RegisterPage() {
   return (
@@ -6,12 +6,9 @@ export default function RegisterPage() {
       <p className="text-sm tracking-[0.3em] text-cyan-300 uppercase">Devine</p>
       <h1 className="text-4xl font-bold">Create account</h1>
       <p className="text-slate-300">
-        Account creation, password policy guidance, and validation messages will connect here in
-        Sprint 1.
+        Start with username and password. Email is optional until account recovery ships.
       </p>
-      <Link className="font-semibold text-cyan-300" href="/auth/login">
-        Already have an account?
-      </Link>
+      <RegisterForm />
     </main>
   );
 }
