@@ -1,0 +1,48 @@
+{
+  "name": "dailydev",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "type-check": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt --check .",
+    "format:write": "oxfmt .",
+    "prepare": "husky",
+    "test": "bun test tests/unit",
+    "test:e2e": "playwright test",
+    "db:migrate": "bun run lib/db/migrate.ts",
+    "db:seed:dev": "bun run lib/db/seed.ts dev",
+    "db:seed:qa": "bun run lib/db/seed.ts qa",
+    "complete-check": "bun run type-check && bun run lint && bun run format && bun run test && bun run test:e2e && bun run build"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.0.2",
+    "@tailwindcss/postcss": "4.1.17",
+    "drizzle-orm": "0.45.2",
+    "motion": "12.39.0",
+    "next": "16.0.4",
+    "postgres": "3.4.7",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.60.0",
+    "@types/bun": "1.3.1",
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "drizzle-kit": "0.31.8",
+    "husky": "9.1.7",
+    "lint-staged": "16.2.7",
+    "oxfmt": "0.51.0",
+    "oxlint": "1.65.0",
+    "prettier": "3.6.2",
+    "tailwindcss": "4.1.17",
+    "typescript": "6.0.3"
+  }
+}
