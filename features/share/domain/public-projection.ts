@@ -1,5 +1,5 @@
-import type { HealthState, SeniorityLevel } from "@/lib/scoring";
-import type { PublicShareSnapshot } from "./types";
+import type { HealthState, SeniorityLevel } from "@/features/scoring";
+import type { PublicShareSnapshot } from "../application/types";
 
 export type ShareSnapshotProjectionRow = {
   publicId: string;

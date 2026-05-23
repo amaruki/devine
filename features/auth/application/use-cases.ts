@@ -11,7 +11,7 @@ import {
   type LoginInput,
   type RegisterUserInput,
   type SessionClaims,
-} from "./domain";
+} from "../domain";
 import type { AuthDependencies } from "./ports";
 
 export async function registerUserWithDependencies(

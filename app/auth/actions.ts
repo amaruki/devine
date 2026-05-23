@@ -10,15 +10,13 @@ import {
   sessionCookieName,
   type AuthErrorCode,
   type AuthSuccess,
-} from "@/lib/auth";
+} from "@/features/auth";
 
 export type AuthActionState = {
   status: "idle" | "error";
   message: string;
   code?: AuthErrorCode;
 };
-
-const idleState: AuthActionState = { status: "idle", message: "" };
 
 export async function registerAccount(
   _previousState: AuthActionState,
@@ -58,10 +56,6 @@ export async function logoutAccount(): Promise<void> {
   await logoutUser(token);
   cookieStore.delete(sessionCookieName);
   redirect("/");
-}
-
-export function getIdleAuthState(): AuthActionState {
-  return idleState;
 }
 
 async function setSessionCookie(result: AuthSuccess): Promise<void> {

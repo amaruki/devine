@@ -1,4 +1,4 @@
-import { validateDailyDevToken } from "@/lib/dailydev";
+import { validateDailyDevToken } from "@/features/dailydev";
 import { z } from "zod";
 
 const requestSchema = z.object({

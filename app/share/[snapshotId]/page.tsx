@@ -1,5 +1,5 @@
 import { DuckAvatar } from "@/components/duck/DuckAvatar";
-import { getPublicShareSnapshot } from "@/lib/share";
+import { getPublicShareSnapshot } from "@/features/share";
 import { notFound } from "next/navigation";
 
 const seniorityLabels = {

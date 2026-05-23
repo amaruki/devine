@@ -3,5 +3,5 @@ export {
   fetchDailyDevFeed,
   fetchDailyDevProfile,
   validateDailyDevToken,
-} from "./client";
-export type { DailyDevPost, DailyDevProfile } from "./types";
+} from "./application/client";
+export type { DailyDevPost, DailyDevProfile } from "./domain/types";

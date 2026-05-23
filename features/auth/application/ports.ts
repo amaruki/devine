@@ -1,4 +1,4 @@
-import type { SessionClaims, UnsignedSessionClaims, UserRole } from "./domain";
+import type { SessionClaims, UnsignedSessionClaims, UserRole } from "../domain";
 
 export type AuthUserRecord = {
   id: string;

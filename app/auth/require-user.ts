@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getCurrentUser, sessionCookieName, type AuthContext } from "@/lib/auth";
+import { getCurrentUser, sessionCookieName, type AuthContext } from "@/features/auth";
 
 export async function requireUser(): Promise<AuthContext> {
   const cookieStore = await cookies();

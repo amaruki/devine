@@ -6,7 +6,7 @@ import type {
   AuthUserRepository,
   CreateAuthUserInput,
   CreatedAuthUser,
-} from "@/lib/auth/ports";
+} from "@/features/auth/application/ports";
 import { db } from "../client";
 import { auditEvents, sessions, users } from "../schema";
 

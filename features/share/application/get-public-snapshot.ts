@@ -1,11 +1,12 @@
-import { toPublicShareSnapshot } from "./public-projection";
+import { toPublicShareSnapshot } from "../domain/public-projection";
+import type { ShareDependencies } from "./ports";
 import type { GetPublicShareSnapshotResult } from "./types";
 
-export async function getPublicShareSnapshot(
+export async function getPublicShareSnapshotWithDependencies(
   publicId: string,
+  dependencies: ShareDependencies,
 ): Promise<GetPublicShareSnapshotResult> {
-  const { findShareSnapshotByPublicId } = await import("@/lib/db/share-snapshots");
-  const row = await findShareSnapshotByPublicId(publicId);
+  const row = await dependencies.snapshots.findByPublicId(publicId);
 
   if (!row) {
     return { status: "not_found" };

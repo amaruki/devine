@@ -1,4 +1,4 @@
-import type { PasswordHasher } from "../ports";
+import type { PasswordHasher } from "../application/ports";
 
 export const bunPasswordHasher: PasswordHasher = {
   async hash(password: string): Promise<string> {

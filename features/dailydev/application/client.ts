@@ -1,4 +1,4 @@
-import type { DailyDevPost, DailyDevProfile } from "./types";
+import type { DailyDevPost, DailyDevProfile } from "../domain/types";
 
 export async function validateDailyDevToken(token: string): Promise<DailyDevProfile> {
   if (token.trim().length === 0) {

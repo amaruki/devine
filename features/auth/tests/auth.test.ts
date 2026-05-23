@@ -4,14 +4,14 @@ import {
   normalizeUsername,
   validatePassword,
   validateUsername,
-} from "@/lib/auth/domain";
-import type { AuthDependencies, AuthUserRecord } from "@/lib/auth/ports";
+} from "@/features/auth/domain";
+import type { AuthDependencies, AuthUserRecord } from "@/features/auth/application/ports";
 import {
   getCurrentUserWithDependencies,
   loginUserWithDependencies,
   logoutUserWithDependencies,
   registerUserWithDependencies,
-} from "@/lib/auth/use-cases";
+} from "@/features/auth/application/use-cases";
 
 describe("auth validation", () => {
   test("normalizes usernames before uniqueness checks", () => {

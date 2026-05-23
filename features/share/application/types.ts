@@ -1,4 +1,4 @@
-import type { HealthState, SeniorityLevel } from "@/lib/scoring";
+import type { HealthState, SeniorityLevel } from "@/features/scoring";
 
 export type PublicShareSnapshot = {
   publicId: string;

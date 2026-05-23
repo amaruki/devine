@@ -25,4 +25,4 @@ export {
   loginUser,
   logoutUser,
   registerUser,
-} from "./service";
+} from "./infrastructure/service";

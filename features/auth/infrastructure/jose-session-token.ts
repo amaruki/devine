@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { isUserRole, type SessionClaims, type UnsignedSessionClaims } from "../domain";
-import type { SessionTokenService } from "../ports";
+import type { SessionTokenService } from "../application/ports";
 
 export function createJoseSessionTokenService(secret: Uint8Array): SessionTokenService {
   return {

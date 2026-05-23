@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { getHealth } from "@/lib/operations/health";
+import { getHealth } from "@/features/operations/application/health";
 
 describe("getHealth", () => {
   test("returns the explicit health contract", async () => {

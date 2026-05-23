@@ -1,4 +1,4 @@
-import { resetState, resetStateRequestSchema } from "@/lib/operations/reset-state";
+import { resetState, resetStateRequestSchema } from "@/features/operations/application/reset-state";
 
 function isResetApiEnabled() {
   return process.env.APP_ENV !== "production" && process.env.ENABLE_RESET_API === "true";

@@ -1,18 +1,16 @@
+import { createPublicShareId } from "../domain/public-id";
 import { getCurrentShareSnapshotDraft } from "./current-state";
-import { createPublicShareId } from "./public-id";
+import type { ShareDependencies } from "./ports";
 import type { CreateShareSnapshotResult } from "./types";
 
-function getPublicAppUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-}
-
-export async function createShareSnapshot(userId: string): Promise<CreateShareSnapshotResult> {
+export async function createShareSnapshotWithDependencies(
+  userId: string,
+  dependencies: ShareDependencies,
+): Promise<CreateShareSnapshotResult> {
   const draft = getCurrentShareSnapshotDraft();
   const publicId = createPublicShareId();
 
-  const { createShareSnapshotRow } = await import("@/lib/db/share-snapshots");
-
-  await createShareSnapshotRow({
+  await dependencies.snapshots.create({
     publicId,
     userId,
     dailyPetSnapshotId: null,
@@ -27,6 +25,6 @@ export async function createShareSnapshot(userId: string): Promise<CreateShareSn
   return {
     status: "ok",
     publicId,
-    url: `${getPublicAppUrl()}/share/${publicId}`,
+    url: `${dependencies.getPublicAppUrl()}/share/${publicId}`,
   };
 }

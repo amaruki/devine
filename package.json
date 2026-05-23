@@ -12,7 +12,7 @@
     "format": "oxfmt --check .",
     "format:write": "oxfmt .",
     "prepare": "husky",
-    "test": "bun test tests/unit",
+    "test": "bun test features",
     "test:e2e": "playwright test",
     "db:migrate": "bun run lib/db/migrate.ts",
     "db:seed:dev": "bun run lib/db/seed.ts dev",

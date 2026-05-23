@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { getIdleAuthState, loginAccount } from "../actions";
+import { loginAccount, type AuthActionState } from "../actions";
+
+const idleAuthState: AuthActionState = { status: "idle", message: "" };
 
 export function LoginForm() {
-  const [state, formAction, pending] = useActionState(loginAccount, getIdleAuthState());
+  const [state, formAction, pending] = useActionState(loginAccount, idleAuthState);
 
   return (
     <form

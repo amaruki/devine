@@ -1,4 +1,4 @@
-import { selectSpeechBubble } from "@/lib/speech";
+import { selectSpeechBubble } from "@/features/speech";
 import type { ShareSnapshotDraft } from "./types";
 
 export function getCurrentShareSnapshotDraft(): ShareSnapshotDraft {

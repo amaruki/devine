@@ -1,5 +1,5 @@
 import { requireUser } from "@/app/auth/require-user";
-import { createShareSnapshot, softDeleteShareSnapshot } from "@/lib/share";
+import { createShareSnapshot, softDeleteShareSnapshot } from "@/features/share";
 import { z } from "zod";
 
 const createShareSnapshotRequestSchema = z.object({}).strict();
