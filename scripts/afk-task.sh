@@ -7,16 +7,22 @@ Usage:
   bash scripts/afk-task.sh <issue-number>
   bash scripts/afk-task.sh next
   bash scripts/afk-task.sh autonomous-prompt [issue-number|next]
+  bash scripts/afk-task.sh run-next
+  bash scripts/afk-task.sh run-loop [max-issues]
 
 Examples:
   bash scripts/afk-task.sh 5
   bash scripts/afk-task.sh next
   bash scripts/afk-task.sh autonomous-prompt next
+  bash scripts/afk-task.sh run-next
+  bash scripts/afk-task.sh run-loop 3
 
 Commands:
   <issue-number>            Print an agent-executable implementation brief for one AFK GitHub issue.
   next                      Find the lowest-numbered open AFK issue with no open blockers and print its brief.
   autonomous-prompt target  Print a full autonomous implementation prompt for Claude Code.
+  run-next                  Invoke Claude Code to implement the next unblocked AFK issue, then stop.
+  run-loop [max-issues]     Repeatedly invoke Claude Code for unblocked AFK issues until blocked or max is reached.
 
 The issue body must include:
   ## Blocked by
@@ -53,7 +59,8 @@ else
   exit 1
 fi
 
-"${python_cmd[@]}" - "$repo_root" "$command_arg" "$target_arg" <<'PY'
+run_python() {
+  "${python_cmd[@]}" - "$repo_root" "$1" "${2:-}" <<'PY'
 from __future__ import annotations
 
 import json
@@ -80,15 +87,11 @@ def gh(args: list[str]) -> str:
 
 
 def issue_view(number: int | str) -> dict:
-    return json.loads(
-        gh(["issue", "view", str(number), "--json", "number,title,body,state,labels,url"])
-    )
+    return json.loads(gh(["issue", "view", str(number), "--json", "number,title,body,state,labels,url"]))
 
 
 def issue_state(number: int | str) -> dict:
-    return json.loads(
-        gh(["issue", "view", str(number), "--json", "number,title,state,url"])
-    )
+    return json.loads(gh(["issue", "view", str(number), "--json", "number,title,state,url"]))
 
 
 def parse_type(body: str) -> str:
@@ -97,11 +100,7 @@ def parse_type(body: str) -> str:
 
 
 def parse_blocked_by(body: str) -> str:
-    match = re.search(
-        r"^## Blocked by\s*\n\s*(.*?)(?=\n## |\Z)",
-        body,
-        flags=re.MULTILINE | re.DOTALL,
-    )
+    match = re.search(r"^## Blocked by\s*\n\s*(.*?)(?=\n## |\Z)", body, flags=re.MULTILINE | re.DOTALL)
     return match.group(1).strip() if match else "Unknown"
 
 
@@ -130,11 +129,9 @@ def open_blockers(blocked_by: str) -> list[str]:
 def validate_afk_issue(issue: dict) -> None:
     if issue["state"].upper() != "OPEN":
         fail(f"Issue {issue['number']} is {issue['state']}, not OPEN. Do not run unattended.")
-
     metadata_type = parse_type(issue.get("body") or "")
     if metadata_type != "AFK":
         fail(f"Issue {issue['number']} is marked {metadata_type}, not AFK. Do not run unattended.")
-
     blockers = open_blockers(parse_blocked_by(issue.get("body") or ""))
     if blockers:
         print(f"Issue {issue['number']} still has open blockers. Do not run unattended.", file=sys.stderr)
@@ -144,9 +141,7 @@ def validate_afk_issue(issue: dict) -> None:
 
 
 def list_open_issues() -> list[dict]:
-    return json.loads(
-        gh(["issue", "list", "--state", "open", "--limit", "100", "--json", "number,title,body,state,labels,url"])
-    )
+    return json.loads(gh(["issue", "list", "--state", "open", "--limit", "100", "--json", "number,title,body,state,labels,url"]))
 
 
 def find_next_afk_issue() -> dict:
@@ -161,25 +156,17 @@ def find_next_afk_issue() -> dict:
 
 
 def context_files() -> list[str]:
-    candidates = [
-        "CLAUDE.md",
-        "docs/CODING_STANDARD.md",
-        "docs/TASK_BREAKDOWN.md",
-        "docs/business",
-        "docs/technical-specs",
-    ]
+    candidates = ["CLAUDE.md", "docs/CODING_STANDARD.md", "docs/TASK_BREAKDOWN.md", "docs/business", "docs/technical-specs"]
     return [candidate for candidate in candidates if (repo_root / candidate).exists()]
 
 
 def build_brief(issue: dict) -> str:
     validate_afk_issue(issue)
-
     body = (issue.get("body") or "").strip()
     blocked_by = parse_blocked_by(body)
     stories = parse_stories(body)
     issue_labels = labels(issue)
     files = context_files()
-
     return f"""# Agent-executable AFK task: GitHub issue #{issue['number']}
 
 You are implementing one AFK issue in this repository.
@@ -234,14 +221,13 @@ Proceed autonomously within this issue only:
 6. Close GitHub issue #{issue['number']} with a comment summarizing files changed, acceptance criteria completed, and checks run.
 7. Stop after closing this issue. Do not start another issue unless explicitly instructed by the user or an outer loop.
 
-Stop instead of committing or closing if checks fail, browser verification is required but cannot be completed, requirements are ambiguous, or external credentials/services are missing.
+Stop instead of committing or closing if checks fail, browser verification is required but cannot be completed, requirements are ambiguous, external credentials/services are missing, or the working tree contains unrelated user changes.
 """
 
 
 def resolve_target(command: str, target: str) -> dict:
-    if command == "next":
+    if command in {"next", "next-number"}:
         return find_next_afk_issue()
-
     if command == "autonomous-prompt":
         if not target:
             fail("autonomous-prompt requires an issue number or next.", 2)
@@ -250,16 +236,62 @@ def resolve_target(command: str, target: str) -> dict:
         if not target.isdigit():
             fail("Issue number must be numeric, or use next.", 2)
         return issue_view(target)
-
     if command.isdigit():
         return issue_view(command)
-
-    fail("Unknown command. Use an issue number, next, or autonomous-prompt.", 2)
+    fail("Unknown command. Use an issue number, next, autonomous-prompt, or next-number.", 2)
 
 
 selected_issue = resolve_target(command_arg, target_arg)
 if command_arg == "autonomous-prompt":
     print(build_autonomous_prompt(selected_issue), end="")
+elif command_arg == "next-number":
+    validate_afk_issue(selected_issue)
+    print(selected_issue["number"], end="")
 else:
     print(build_brief(selected_issue), end="")
 PY
+}
+
+run_next() {
+  if ! command -v claude >/dev/null 2>&1; then
+    printf 'Cannot find claude. Install Claude Code or run this from an environment where claude is on PATH.\n' >&2
+    exit 1
+  fi
+
+  issue_number="$(run_python next-number)"
+  printf 'Starting autonomous Claude Code run for issue #%s.\n' "$issue_number" >&2
+  prompt="$(run_python autonomous-prompt "$issue_number")"
+  claude "$prompt"
+}
+
+run_loop() {
+  local max_issues="${target_arg:-1}"
+  case "$max_issues" in
+    ''|*[!0-9]*)
+      printf 'run-loop max-issues must be numeric.\n' >&2
+      exit 2
+      ;;
+  esac
+
+  local completed=0
+  while (( completed < max_issues )); do
+    if ! run_next; then
+      printf 'Autonomous loop stopped after %s completed run(s).\n' "$completed" >&2
+      exit 1
+    fi
+    completed=$((completed + 1))
+  done
+  printf 'Autonomous loop reached max issue count: %s.\n' "$max_issues" >&2
+}
+
+case "$command_arg" in
+  run-next)
+    run_next
+    ;;
+  run-loop)
+    run_loop
+    ;;
+  *)
+    run_python "$command_arg" "$target_arg"
+    ;;
+esac
