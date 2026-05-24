@@ -10,7 +10,7 @@
 
 Covers demo mode, judge demo reset, dashboard companion reads, recent activity reads, and minimal static share snapshot creation and public lookup.
 
-Serves: AC-01.01, AC-01.02, AC-01.03, AC-04.01, AC-04.02, AC-04.03, AC-04.04, AC-04.05, AC-04.06, AC-05.01, AC-05.02, AC-05.03, AC-05.04, AC-12.01, AC-12.02, AC-12.03, AC-13.01, AC-13.02, AC-13.03, AC-13.04, AC-18.01, AC-18.02, AC-18.03, AC-18.04, AC-18.05, AC-20.01, AC-20.02, AC-14.01, AC-14.02, AC-14.03, AC-14.04, AC-14.05, AC-14.10, AC-19.04
+Serves: AC-01.01, AC-01.02, AC-01.03, AC-04.01, AC-04.02, AC-04.03, AC-04.04, AC-04.05, AC-04.06, AC-05.01, AC-05.02, AC-05.03, AC-05.04, AC-12.01, AC-12.02, AC-12.03, AC-13.01, AC-13.02, AC-13.03, AC-13.04, AC-18.01, AC-18.02, AC-18.03, AC-18.04, AC-18.05, AC-18.06, AC-18.07, AC-20.01, AC-20.02, AC-14.01, AC-14.02, AC-14.03, AC-14.04, AC-14.05, AC-14.10, AC-19.04
 
 Sources: `../business/acceptance-criteria-breakdown/acceptance-criteria-sprint-2.md`, `../technical-specs/05-module-definitions.md`, `../technical-specs/06-data-model.md`, `../technical-specs/07-security.md`, `../technical-specs/08-non-functional-requirements.md`, `../technical-specs/09-authentication-and-authorization.md`, `../technical-specs/13-scoring-game-loop-strategy.md`, `../technical-specs/14-share-snapshot-privacy-strategy.md`
 
@@ -158,6 +158,75 @@ Errors:
 | Target is not a judge demo account | `not_found`       |
 | Invalid persona                    | `invalid_persona` |
 
+## Demo account readiness
+
+Prepared judge demo accounts must include persisted state sufficient to show the full 60-second judge path without population at demo time.
+
+### `seedJudgeDemoAccounts()`
+
+Server-only seed operation for superadmin or seed runner.
+
+```ts
+type JudgeDemoAccount = {
+  username: string;
+  persona: DemoPersonaKey;
+  seededAt: string;
+};
+```
+
+Rules:
+
+1. Creates or updates judge demo accounts with preset credentials.
+2. Populates server-persisted demo state for the assigned persona.
+3. Pre-seeds activity events, energy, health, and seniority states consistent with the persona.
+4. Creates `judge_account_seed` audit event.
+5. Seeded accounts are read-only for persona switch and reset by authorized callers only.
+
+## Demo completion analytics
+
+AC-18.07 requires that the demo judge path produce a single `demo_completed` event.
+
+### `recordDemoCompletion()`
+
+Server action called by the frontend when the judge demo path checklist is satisfied.
+
+```ts
+type DemoCompletionInput = {
+  steps: {
+    landingView: boolean;
+    login: boolean;
+    demoEntry: boolean;
+    simulationAction: boolean;
+    energyOrHealthChange: boolean;
+    questProgressOrCompletion: boolean;
+    shareCreationOrPreview: boolean;
+  };
+};
+
+type DemoCompletionResult = {
+  recorded: boolean;
+  eventId: string;
+  completedAt: string;
+};
+```
+
+Rules:
+
+1. Requires authenticated user in demo mode.
+2. Records a single idempotent `demo_completed` audit event per session.
+3. Step flags are optional frontend attestations; the server checks at least five are `true` before recording.
+4. Repeated calls return the existing event without duplication.
+5. The event belongs to the user's account and persists regardless of later demo resets.
+
+Errors:
+
+| Condition                    | Error code                  |
+| ---------------------------- | --------------------------- |
+| Missing session              | `unauthorized`              |
+| Not in demo mode             | `demo_only`                 |
+| Fewer than five steps passed | `demo_path_incomplete`      |
+| Already recorded             | Success with existing event |
+
 ## Companion view model
 
 Dashboard companion components consume this server-derived view model.
@@ -274,3 +343,59 @@ Rules:
 5. Never exposes token, email, user ID, daily.dev profile ID, raw events, comments, or full article lists.
 
 Public not-found behavior returns a safe not-found page. Deleted behavior is completed in `recovery-retention-contracts.md`.
+
+## Share snapshot not-found behavior
+
+When a public share URL references an unknown or deleted `public_id`, the route must return a safe branded response without leaking whether the ID was real.
+
+```ts
+type ShareSnapshotNotFound = {
+  publicId?: string;
+  found: false;
+  message: string;
+};
+```
+
+Rules:
+
+1. Requires no session.
+2. Unknown and deleted public IDs may return the same public-facing response.
+3. Response must not reveal internal state, user identity, or snapshot existence.
+4. HTTP status: unknown IDs return `404`; soft-deleted IDs return `410` (see `recovery-retention-contracts.md`).
+
+## Demo fallback expectations
+
+Demo mode works independently of daily.dev API availability. The following contracts apply across all demo-mode reads and mutations.
+
+| Concern            | Contract                                                                                                                                                              |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API independence   | `getDashboardState()`, `getDemoState()`, `applyDemoAction()`, `resetDemoState()`, quest reads, and inventory reads must return success when daily.dev is unreachable. |
+| Degraded connected | When a connected user's daily.dev token fails, the dashboard falls back to existing Devine-tracked state and shows a degraded banner instead of a broken page.        |
+| Missing API fields | `ActivityEventView.postTitle`, `postUrl`, and `tags` may be `null` or empty. UI must handle missing fields without layout shifts or broken lists.                     |
+| Landing page       | Landing page is static and requires no database or daily.dev call.                                                                                                    |
+| Reset-state        | Non-production reset-state may be called while daily.dev is unreachable.                                                                                              |
+| Demo completion    | `recordDemoCompletion()` must not require a daily.dev token or API call.                                                                                              |
+
+## Safe public projection lock
+
+Every contract in this spec that produces a public or potentially-public payload must satisfy these invariants:
+
+| Field category         | Allowed in public projection? |
+| ---------------------- | ----------------------------- |
+| `seniorityLevel`       | Yes                           |
+| `seniorityScore`       | Yes                           |
+| `healthState`          | Yes                           |
+| `topTags` (1-3)        | Yes                           |
+| `speechBubble`         | Yes, deterministic templates  |
+| `poweredBy`            | Yes                           |
+| `generatedAt`          | Yes                           |
+| `user_id`              | Never                         |
+| `daily_dev_profile_id` | Never                         |
+| `email`                | Never                         |
+| `raw events`           | Never                         |
+| `comments`             | Never                         |
+| `full article lists`   | Never                         |
+| `token`                | Never                         |
+| `password hash`        | Never                         |
+
+Demo state reads and companion view models apply the same projection rules as public share snapshots when they produce data that could appear in a non-authenticated context. Internal dashboard reads may include owner-only fields for the authenticated user.
