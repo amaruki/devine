@@ -34,17 +34,17 @@
   },
   "devDependencies": {
     "@playwright/test": "1.60.0",
-    "@types/bun": "1.3.1",
-    "@types/node": "24.10.1",
+    "@types/bun": "1.3.14",
+    "@types/node": "25.9.1",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
-    "drizzle-kit": "0.31.8",
+    "drizzle-kit": "0.31.10",
     "husky": "9.1.7",
-    "lint-staged": "16.2.7",
+    "lint-staged": "17.0.5",
     "oxfmt": "0.51.0",
-    "oxlint": "1.65.0",
-    "prettier": "3.6.2",
-    "tailwindcss": "4.1.17",
+    "oxlint": "1.66.0",
+    "prettier": "3.8.3",
+    "tailwindcss": "4.3.0",
     "typescript": "6.0.3"
   }
 }
