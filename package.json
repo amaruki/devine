@@ -15,6 +15,7 @@
     "test": "bun test features",
     "test:e2e": "playwright test",
     "db:migrate": "bun run lib/db/migrate.ts",
+    "db:studio": "drizzle-kit studio",
     "db:seed:dev": "bun run lib/db/seed.ts dev",
     "db:seed:qa": "bun run lib/db/seed.ts qa",
     "complete-check": "bun run type-check && bun run lint && bun run format && bun run test && bun run test:e2e && bun run build"
