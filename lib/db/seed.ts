@@ -95,6 +95,8 @@ async function ensureUser(
   return inserted[0].id;
 }
 
+import { seedJudgeDemoAccounts } from "./seeds/judge-accounts";
+
 async function seedDev(): Promise<void> {
   console.log("Seeding dev...");
   const passwordHash = await Bun.password.hash(DEMO_PASSWORD, "argon2id");
@@ -150,6 +152,8 @@ async function seedDev(): Promise<void> {
       console.log(`  Inserted ${snapshots.length} snapshots for ${name}`);
     }
   }
+
+  await seedJudgeDemoAccounts();
 }
 
 async function seedQa(): Promise<void> {
