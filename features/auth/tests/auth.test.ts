@@ -159,7 +159,10 @@ describe("auth use cases", () => {
       touched: false,
     });
 
-    const result = await getCurrentUserWithDependencies("token:session-1", dependencies);
+    const result = await getCurrentUserWithDependencies(
+      "token:session-1:user-1:duckdev:user:1",
+      dependencies,
+    );
 
     expect(result).toEqual({
       userId: "user-1",
@@ -182,9 +185,125 @@ describe("auth use cases", () => {
       touched: false,
     });
 
-    await logoutUserWithDependencies("token:session-1", dependencies);
+    await logoutUserWithDependencies("token:session-1:user-1:duckdev:user:1", dependencies);
 
     expect(dependencies.state.sessions[0]?.revokedAt).toEqual(new Date("2026-05-23T12:00:00.000Z"));
+  });
+
+  test("returns null for missing token", async () => {
+    const dependencies = createFakeDependencies();
+
+    const result = await getCurrentUserWithDependencies(undefined, dependencies);
+
+    expect(result).toBeNull();
+  });
+
+  test("returns null for invalid token", async () => {
+    const dependencies = createFakeDependencies();
+
+    const result = await getCurrentUserWithDependencies("bad-token", dependencies);
+
+    expect(result).toBeNull();
+  });
+
+  test("returns null for expired session", async () => {
+    const dependencies = createFakeDependencies();
+    dependencies.state.users.push(createUser({ username: "duckdev" }));
+    dependencies.state.sessions.push({
+      id: "session-1",
+      userId: "user-1",
+      tokenVersion: 1,
+      expiresAt: new Date("2026-05-22T12:00:00.000Z"),
+      revokedAt: null,
+      touched: false,
+    });
+
+    const result = await getCurrentUserWithDependencies(
+      "token:session-1:user-1:duckdev:user:1",
+      dependencies,
+    );
+
+    expect(result).toBeNull();
+  });
+
+  test("returns null for revoked session", async () => {
+    const dependencies = createFakeDependencies();
+    dependencies.state.users.push(createUser({ username: "duckdev" }));
+    dependencies.state.sessions.push({
+      id: "session-1",
+      userId: "user-1",
+      tokenVersion: 1,
+      expiresAt: new Date("2026-05-30T12:00:00.000Z"),
+      revokedAt: new Date("2026-05-23T00:00:00.000Z"),
+      touched: false,
+    });
+
+    const result = await getCurrentUserWithDependencies(
+      "token:session-1:user-1:duckdev:user:1",
+      dependencies,
+    );
+
+    expect(result).toBeNull();
+  });
+
+  test("returns null when token version mismatches user version", async () => {
+    const dependencies = createFakeDependencies();
+    dependencies.state.users.push(createUser({ username: "duckdev", tokenVersion: 2 }));
+    dependencies.state.sessions.push({
+      id: "session-1",
+      userId: "user-1",
+      tokenVersion: 1,
+      expiresAt: new Date("2026-05-30T12:00:00.000Z"),
+      revokedAt: null,
+      touched: false,
+    });
+
+    const result = await getCurrentUserWithDependencies(
+      "token:session-1:user-1:duckdev:user:1",
+      dependencies,
+    );
+
+    expect(result).toBeNull();
+  });
+
+  test("returns null when session belongs to another user — isolation guard", async () => {
+    const dependencies = createFakeDependencies();
+    // user-1 is "duckdev", user-2 is "attacker"
+    dependencies.state.users.push(createUser({ id: "user-1", username: "duckdev" }));
+    dependencies.state.users.push(createUser({ id: "user-2", username: "attacker" }));
+    // session-1 belongs to user-1 (duckdev)
+    dependencies.state.sessions.push({
+      id: "session-1",
+      userId: "user-1",
+      tokenVersion: 1,
+      expiresAt: new Date("2026-05-30T12:00:00.000Z"),
+      revokedAt: null,
+      touched: false,
+    });
+
+    // forged token: claims say userId "user-2" (attacker) but session is user-1 (duckdev)
+    const result = await getCurrentUserWithDependencies(
+      "token:session-1:user-2:attacker:user:1",
+      dependencies,
+    );
+
+    expect(result).toBeNull();
+  });
+
+  test("logout silently no-ops for missing token", async () => {
+    const dependencies = createFakeDependencies();
+
+    await logoutUserWithDependencies(undefined, dependencies);
+
+    expect(dependencies.state.sessions).toEqual([]);
+  });
+
+  test("logout silently no-ops for invalid token", async () => {
+    const dependencies = createFakeDependencies();
+
+    await logoutUserWithDependencies("bad-token", dependencies);
+
+    expect(dependencies.state.sessions).toEqual([]);
   });
 });
 
@@ -308,23 +427,20 @@ function createFakeDependencies(): FakeDependencies {
     },
     sessionToken: {
       async sign(claims): Promise<string> {
-        return `token:${claims.sessionId}`;
+        return `token:${claims.sessionId}:${claims.userId}:${claims.username}:${claims.role}:${claims.tokenVersion}`;
       },
       async verify(token: string) {
-        const sessionId = token.replace("token:", "");
-        const session = state.sessions.find((candidate) => candidate.id === sessionId);
-        const user = session
-          ? state.users.find((candidate) => candidate.id === session.userId)
-          : undefined;
-        return session && user
-          ? {
-              userId: user.id,
-              username: user.username,
-              role: user.role,
-              sessionId: session.id,
-              tokenVersion: session.tokenVersion,
-            }
-          : null;
+        const parts = token.replace("token:", "").split(":");
+        if (parts.length < 5) {
+          return null;
+        }
+        return {
+          sessionId: parts[0]!,
+          userId: parts[1]!,
+          username: parts[2]!,
+          role: parts[3]! as "user" | "superadmin",
+          tokenVersion: parseInt(parts[4]!, 10),
+        };
       },
     },
     clock: {
