@@ -7,22 +7,18 @@ Usage:
   bash scripts/afk-task.sh <issue-number>
   bash scripts/afk-task.sh next
   bash scripts/afk-task.sh autonomous-prompt [issue-number|next]
-  bash scripts/afk-task.sh run-next
-  bash scripts/afk-task.sh run-loop [max-issues]
+  bash scripts/afk-task.sh next-number
 
 Examples:
   bash scripts/afk-task.sh 5
   bash scripts/afk-task.sh next
   bash scripts/afk-task.sh autonomous-prompt next
-  bash scripts/afk-task.sh run-next
-  bash scripts/afk-task.sh run-loop 3
 
 Commands:
   <issue-number>            Print an agent-executable implementation brief for one AFK GitHub issue.
   next                      Find the lowest-numbered open AFK issue with no open blockers and print its brief.
   autonomous-prompt target  Print a full autonomous implementation prompt for Claude Code.
-  run-next                  Invoke Claude Code to implement the next unblocked AFK issue, then stop.
-  run-loop [max-issues]     Repeatedly invoke Claude Code for unblocked AFK issues until blocked or max is reached.
+  next-number               Print only the number of the next unblocked AFK issue.
 
 The issue body must include:
   ## Blocked by
@@ -252,46 +248,4 @@ else:
 PY
 }
 
-run_next() {
-  if ! command -v claude >/dev/null 2>&1; then
-    printf 'Cannot find claude. Install Claude Code or run this from an environment where claude is on PATH.\n' >&2
-    exit 1
-  fi
-
-  issue_number="$(run_python next-number)"
-  printf 'Starting autonomous Claude Code run for issue #%s.\n' "$issue_number" >&2
-  prompt="$(run_python autonomous-prompt "$issue_number")"
-  claude "$prompt"
-}
-
-run_loop() {
-  local max_issues="${target_arg:-1}"
-  case "$max_issues" in
-    ''|*[!0-9]*)
-      printf 'run-loop max-issues must be numeric.\n' >&2
-      exit 2
-      ;;
-  esac
-
-  local completed=0
-  while (( completed < max_issues )); do
-    if ! run_next; then
-      printf 'Autonomous loop stopped after %s completed run(s).\n' "$completed" >&2
-      exit 1
-    fi
-    completed=$((completed + 1))
-  done
-  printf 'Autonomous loop reached max issue count: %s.\n' "$max_issues" >&2
-}
-
-case "$command_arg" in
-  run-next)
-    run_next
-    ;;
-  run-loop)
-    run_loop
-    ;;
-  *)
-    run_python "$command_arg" "$target_arg"
-    ;;
-esac
+run_python "$command_arg" "$target_arg"
