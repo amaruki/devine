@@ -1,3 +1,4 @@
+import { requireUser } from "@/app/auth/require-user";
 import { validateDailyDevToken } from "@/features/dailydev";
 import { z } from "zod";
 
@@ -16,6 +17,8 @@ export type TestConnectionResponse =
     };
 
 export async function POST(request: Request) {
+  await requireUser();
+
   const parsed = requestSchema.safeParse(await request.json());
 
   if (!parsed.success) {

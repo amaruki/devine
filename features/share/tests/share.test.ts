@@ -121,6 +121,32 @@ describe("share use cases", () => {
       { publicId: "devine_public123", userId: "user-1" },
     ]);
   });
+
+  test("delete request carries the calling user's ID for owner scoping", async () => {
+    const dependencies = createFakeDependencies({ deleteResult: "not_found" });
+
+    // user-2 tries to delete user-1's snapshot
+    const result = await softDeleteShareSnapshotWithDependencies(
+      "user-2",
+      "devine_public123",
+      dependencies,
+    );
+
+    // Repository receives userId=user-2, not user-1 — owner check is at DB layer
+    expect(result).toEqual({ status: "not_found" });
+    expect(dependencies.deleteRequests).toEqual([
+      { publicId: "devine_public123", userId: "user-2" },
+    ]);
+  });
+
+  test("create snapshot is scoped to the authenticated user", async () => {
+    const dependencies = createFakeDependencies();
+
+    const result = await createShareSnapshotWithDependencies("user-2", dependencies);
+
+    expect(result.status).toBe("ok");
+    expect(dependencies.createdSnapshots[0]?.userId).toBe("user-2");
+  });
 });
 
 type ShareSnapshotRecord = ShareSnapshotProjectionRow & {
