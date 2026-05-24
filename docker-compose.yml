@@ -1,0 +1,15 @@
+services:
+  postgres:
+    container_name: devine-pg
+    image: postgres:alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-devine}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devine}
+      POSTGRES_DB: ${POSTGRES_DB:-devine}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+
+volumes:
+  pgdata:
