@@ -1,6 +1,7 @@
 import { DuckAvatar } from "@/components/duck/DuckAvatar";
 import { EnergyProgress } from "@/components/dashboard/EnergyProgress";
 import { DemoActions } from "@/components/dashboard/DemoActions";
+import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { DuckSpeechBubble } from "@/components/duck/DuckSpeechBubble";
 import { logoutAccount } from "../auth/actions";
 import { requireUser } from "../auth/require-user";
@@ -125,26 +126,7 @@ export default async function DashboardPage() {
         <DemoActions />
       </section>
 
-      {todayEvents.length > 0 ? (
-        <section className="rounded-3xl border border-slate-800 bg-slate-950 p-8">
-          <h2 className="mb-4 text-lg font-semibold">Today&rsquo;s activity</h2>
-          <ul className="divide-y divide-slate-800">
-            {todayEvents.slice(0, 10).map((event) => (
-              <li key={event.id} className="flex items-center justify-between py-3">
-                <div>
-                  <span className="rounded bg-slate-800 px-2 py-0.5 text-xs font-medium text-slate-300">
-                    {event.type}
-                  </span>
-                  <span className="ml-2 text-sm text-slate-400">
-                    {event.postTitle ?? "Untitled"}
-                  </span>
-                </div>
-                <span className="text-sm text-yellow-400 tabular-nums">+{event.energyEarned}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
+      <RecentActivity events={todayEvents.slice(0, 10)} />
     </main>
   );
 }
