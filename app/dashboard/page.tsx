@@ -3,6 +3,7 @@ import { EnergyProgress } from "@/components/dashboard/EnergyProgress";
 import { DemoActions } from "@/components/dashboard/DemoActions";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { DuckSpeechBubble } from "@/components/duck/DuckSpeechBubble";
+import { ShareSnapshot } from "@/components/dashboard/ShareSnapshot";
 import { logoutAccount } from "../auth/actions";
 import { requireUser } from "../auth/require-user";
 import { calculateDailyEnergy, computeDailySnapshot, DAILY_TARGET } from "@/features/scoring";
@@ -124,6 +125,14 @@ export default async function DashboardPage() {
           daily cap.
         </p>
         <DemoActions />
+      </section>
+
+      <section className="rounded-3xl border border-slate-800 bg-slate-950 p-8">
+        <h2 className="mb-4 text-lg font-semibold">Share your duck</h2>
+        <p className="mb-4 text-sm text-slate-400">
+          Create a public snapshot of your duck companion to share with others.
+        </p>
+        <ShareSnapshot />
       </section>
 
       <RecentActivity events={todayEvents.slice(0, 10)} />

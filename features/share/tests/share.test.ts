@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createShareSnapshotWithDependencies } from "../application/create-snapshot";
 import { softDeleteShareSnapshotWithDependencies } from "../application/delete-snapshot";
 import { getPublicShareSnapshotWithDependencies } from "../application/get-public-snapshot";
-import type { ShareDependencies } from "../application/ports";
+import type { ShareDependencies, UserSnapshotState } from "../application/ports";
 import {
   createPublicShareId,
   isPublicShareId,
@@ -21,6 +21,18 @@ function makeShareSnapshotRow(
     topTags: ["architecture", "ai", "security", "private-overflow"],
     speechBubble: "My duck stopped saying it works on my machine this week.",
     generatedAt: new Date("2026-05-23T12:00:00.000Z"),
+    ...overrides,
+  };
+}
+
+function makeUserSnapshotState(overrides: Partial<UserSnapshotState> = {}): UserSnapshotState {
+  return {
+    seniorityLevel: "grounded_scholar",
+    seniorityScore: 67,
+    healthState: "stable",
+    topTags: ["architecture", "ai", "security"],
+    energyToday: 42,
+    dailyTarget: 50,
     ...overrides,
   };
 }
@@ -67,8 +79,9 @@ describe("share public IDs", () => {
 describe("share use cases", () => {
   test("creates snapshots through the repository port", async () => {
     const dependencies = createFakeDependencies();
+    const state = makeUserSnapshotState();
 
-    const result = await createShareSnapshotWithDependencies("user-1", dependencies);
+    const result = await createShareSnapshotWithDependencies("user-1", state, dependencies);
 
     expect(result.status).toBe("ok");
     expect(result.url).toBe(`https://devine.test/share/${result.publicId}`);
@@ -76,7 +89,7 @@ describe("share use cases", () => {
       publicId: result.publicId,
       userId: "user-1",
       dailyPetSnapshotId: null,
-      seniorityLevel: "code_monkey",
+      seniorityLevel: "grounded_scholar",
       healthState: "stable",
     });
   });
@@ -141,8 +154,9 @@ describe("share use cases", () => {
 
   test("create snapshot is scoped to the authenticated user", async () => {
     const dependencies = createFakeDependencies();
+    const state = makeUserSnapshotState();
 
-    const result = await createShareSnapshotWithDependencies("user-2", dependencies);
+    const result = await createShareSnapshotWithDependencies("user-2", state, dependencies);
 
     expect(result.status).toBe("ok");
     expect(dependencies.createdSnapshots[0]?.userId).toBe("user-2");

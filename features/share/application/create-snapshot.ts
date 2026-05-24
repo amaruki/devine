@@ -1,13 +1,14 @@
 import { createPublicShareId } from "../domain/public-id";
-import { getCurrentShareSnapshotDraft } from "./current-state";
+import { buildShareSnapshotDraft, type UserSnapshotState } from "./current-state";
 import type { ShareDependencies } from "./ports";
 import type { CreateShareSnapshotResult } from "./types";
 
 export async function createShareSnapshotWithDependencies(
   userId: string,
+  state: UserSnapshotState,
   dependencies: ShareDependencies,
 ): Promise<CreateShareSnapshotResult> {
-  const draft = getCurrentShareSnapshotDraft();
+  const draft = buildShareSnapshotDraft(state);
   const publicId = createPublicShareId();
 
   await dependencies.snapshots.create({

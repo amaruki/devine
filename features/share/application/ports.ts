@@ -1,6 +1,8 @@
 import type { ShareSnapshotProjectionRow } from "../domain/public-projection";
 import type { ShareSnapshotDraft } from "./types";
 
+export type { UserSnapshotState } from "./types";
+
 export type CreateShareSnapshotInput = ShareSnapshotDraft & {
   publicId: string;
   userId: string;

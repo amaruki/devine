@@ -11,4 +11,6 @@ export type {
   DeleteShareSnapshotResult,
   GetPublicShareSnapshotResult,
   PublicShareSnapshot,
+  UserSnapshotState,
 } from "./application/types";
+export { buildShareSnapshotDraft } from "./application/current-state";

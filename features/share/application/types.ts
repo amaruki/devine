@@ -44,3 +44,12 @@ export type ShareSnapshotDraft = {
   speechBubble: string;
   generatedAt: Date;
 };
+
+export type UserSnapshotState = {
+  seniorityLevel: SeniorityLevel;
+  seniorityScore: number;
+  healthState: HealthState;
+  topTags: string[];
+  energyToday: number;
+  dailyTarget: number;
+};

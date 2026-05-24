@@ -1,19 +1,21 @@
 import { selectSpeechBubble } from "@/features/speech";
-import type { ShareSnapshotDraft } from "./types";
+import type { ShareSnapshotDraft, UserSnapshotState } from "./types";
 
-export function getCurrentShareSnapshotDraft(): ShareSnapshotDraft {
+export { type UserSnapshotState } from "./types";
+
+export function buildShareSnapshotDraft(state: UserSnapshotState): ShareSnapshotDraft {
   const speechContext = {
-    healthState: "stable" as const,
-    seniorityLevel: "code_monkey" as const,
-    topTags: ["architecture", "ai", "security"],
-    energyToday: 42,
-    dailyTarget: 50,
+    healthState: state.healthState,
+    seniorityLevel: state.seniorityLevel,
+    topTags: state.topTags,
+    energyToday: state.energyToday,
+    dailyTarget: state.dailyTarget,
   };
   return {
-    seniorityLevel: "code_monkey",
-    seniorityScore: 42,
-    healthState: "stable",
-    topTags: ["architecture", "ai", "security"],
+    seniorityLevel: state.seniorityLevel,
+    seniorityScore: state.seniorityScore,
+    healthState: state.healthState,
+    topTags: state.topTags,
     speechBubble: selectSpeechBubble(speechContext),
     generatedAt: new Date(),
   };

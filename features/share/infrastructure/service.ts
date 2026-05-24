@@ -1,7 +1,7 @@
 import { createShareSnapshotWithDependencies } from "../application/create-snapshot";
 import { softDeleteShareSnapshotWithDependencies } from "../application/delete-snapshot";
 import { getPublicShareSnapshotWithDependencies } from "../application/get-public-snapshot";
-import type { ShareDependencies } from "../application/ports";
+import type { ShareDependencies, UserSnapshotState } from "../application/ports";
 import type {
   CreateShareSnapshotResult,
   DeleteShareSnapshotResult,
@@ -9,8 +9,11 @@ import type {
 } from "../application/types";
 import { shareSnapshotRepository } from "./repository";
 
-export async function createShareSnapshot(userId: string): Promise<CreateShareSnapshotResult> {
-  return createShareSnapshotWithDependencies(userId, createShareDependencies());
+export async function createShareSnapshot(
+  userId: string,
+  state: UserSnapshotState,
+): Promise<CreateShareSnapshotResult> {
+  return createShareSnapshotWithDependencies(userId, state, createShareDependencies());
 }
 
 export async function getPublicShareSnapshot(
