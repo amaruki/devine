@@ -6,6 +6,8 @@ import { recordActivityWithDependencies } from "@/features/activity";
 import { calculateDailyEnergy, computeDailySnapshot, DAILY_TARGET } from "@/features/scoring";
 import { claimQuestReward, type ClaimQuestRewardResult } from "@/features/quests";
 import type { ActivityInput } from "@/features/activity";
+import type { UsePowerUpResult, PowerUpType } from "@/features/powerups";
+import { usePowerUp } from "@/features/powerups";
 
 export async function applyDemoDashboardAction(
   action: "read" | "upvote" | "bookmark" | "comment" | "share",
@@ -137,9 +139,7 @@ export async function claimQuestRewardAction(questId: string): Promise<ClaimQues
     import("@/lib/db/repositories/inventory"),
   ]);
 
-  const [{ activityEventRepository }] = await Promise.all([
-    import("@/lib/db/repositories/activity"),
-  ]);
+  const { activityEventRepository } = await import("@/lib/db/repositories/activity");
 
   const deps = {
     quests: questRepository,
@@ -149,4 +149,38 @@ export async function claimQuestRewardAction(questId: string): Promise<ClaimQues
   };
 
   return claimQuestReward(user.userId, { questId }, deps);
+}
+
+export async function usePowerUpAction(type: string): Promise<UsePowerUpResult> {
+  const user = await requireUser();
+
+  const { inventoryRepository, activeEffectRepository, createAuditEvent } = await import(
+    "@/lib/db/repositories/inventory"
+  );
+
+  const { findLatestSnapshotByUser } = await import("@/lib/db/repositories/snapshot");
+
+  const latestSnapshot = await findLatestSnapshotByUser(user.userId);
+  const currentHealth = latestSnapshot?.health ?? 62;
+
+  const validTypes = ["snack", "medicine", "knowledge_gem", "social_boost", "revive_feather"];
+  if (!validTypes.includes(type)) {
+    return { status: "invalid_type" };
+  }
+
+  const deps = {
+    inventory: inventoryRepository,
+    activeEffects: activeEffectRepository,
+    createAuditEvent,
+  };
+
+  const result = await usePowerUp(
+    user.userId,
+    { type: type as PowerUpType },
+    { currentHealth },
+    deps,
+  );
+
+  revalidatePath("/dashboard");
+  return result;
 }

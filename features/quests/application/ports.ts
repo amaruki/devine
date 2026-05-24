@@ -28,6 +28,7 @@ export type InventoryRow = {
 
 export type InventoryRepository = {
   findByUser(userId: string): Promise<InventoryRow[]>;
+  decrement(userId: string, type: PowerUpType, amount: number): Promise<InventoryRow>;
   increment(
     userId: string,
     type: PowerUpType,

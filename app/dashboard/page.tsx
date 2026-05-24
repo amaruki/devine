@@ -5,6 +5,7 @@ import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { DuckSpeechBubble } from "@/components/duck/DuckSpeechBubble";
 import { ShareSnapshot } from "@/components/dashboard/ShareSnapshot";
 import { QuestPanel } from "@/components/dashboard/QuestPanel";
+import { InventoryPanel } from "@/components/dashboard/InventoryPanel";
 import { logoutAccount } from "../auth/actions";
 import { requireUser } from "../auth/require-user";
 import { calculateDailyEnergy, computeDailySnapshot, DAILY_TARGET } from "@/features/scoring";
@@ -19,10 +20,12 @@ export default async function DashboardPage() {
     { activityEventRepository },
     { findLatestSnapshotByUser, upsertDailySnapshot },
     { questRepository },
+    { inventoryRepository, activeEffectRepository },
   ] = await Promise.all([
     import("@/lib/db/repositories/activity"),
     import("@/lib/db/repositories/snapshot"),
     import("@/lib/db/repositories/quest"),
+    import("@/lib/db/repositories/inventory"),
   ]);
 
   const today = new Date();
@@ -78,6 +81,17 @@ export default async function DashboardPage() {
     quests: questRepository,
     events: activityEventRepository,
   });
+
+  const [inventoryRows, activeEffects] = await Promise.all([
+    inventoryRepository.findByUser(user.userId),
+    activeEffectRepository.findByUser(user.userId),
+  ]);
+
+  const inventory = inventoryRows.map((r) => ({ type: r.type, quantity: r.quantity }));
+  const activeEffectViews = activeEffects.map((e) => ({
+    type: e.type,
+    appliesToAction: e.appliesToAction,
+  }));
 
   const topTags = getTopTags(
     sevenDayEvents.map((e) => ({ tags: (e.tags as string[]) ?? [], type: e.type })),
@@ -139,6 +153,12 @@ export default async function DashboardPage() {
       </section>
 
       <QuestPanel quests={questState.quests} />
+
+      <InventoryPanel
+        inventory={inventory}
+        currentHealth={snapshotResult.health}
+        activeEffects={activeEffectViews}
+      />
 
       <section className="rounded-3xl border border-slate-800 bg-slate-950 p-8">
         <h2 className="mb-4 text-lg font-semibold">Share your duck</h2>
