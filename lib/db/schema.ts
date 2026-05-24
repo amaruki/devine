@@ -26,6 +26,7 @@ export const users = pgTable("users", {
   dailyDevProfileId: text("daily_dev_profile_id"),
   selectedPet: text("selected_pet").notNull().default("rubber_duck"),
   mode: text("mode").notNull().default("demo"),
+  persona: text("persona").notNull().default("code_monkey"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

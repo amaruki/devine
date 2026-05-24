@@ -1,6 +1,7 @@
 import { DuckAvatar } from "@/components/duck/DuckAvatar";
 import { getPublicShareSnapshot } from "@/features/share";
 import { notFound } from "next/navigation";
+import type { SeniorityLevel, HealthState } from "@/features/scoring";
 
 const seniorityLabels = {
   ignorant_copaster: "The Ignorant Copaster",
@@ -47,7 +48,11 @@ export default async function ShareSnapshotPage({
       <section className="rounded-3xl border border-slate-800 bg-slate-950 p-8 shadow-2xl shadow-cyan-950/30">
         <p className="text-sm tracking-[0.3em] text-cyan-300 uppercase">Devine Snapshot</p>
         <div className="mt-8 grid gap-8 md:grid-cols-[180px_1fr] md:items-center">
-          <DuckAvatar healthState={snapshot.healthState} seniorityLevel={snapshot.seniorityLevel} />
+          <DuckAvatar
+            healthState={snapshot.healthState as HealthState}
+            seniorityLevel={snapshot.seniorityLevel as SeniorityLevel}
+            animationCue="idle"
+          />
           <div>
             <h1 className="text-4xl font-bold">{seniorityLabels[snapshot.seniorityLevel]}</h1>
             <p className="mt-3 text-xl text-slate-300">

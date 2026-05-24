@@ -1,9 +1,11 @@
 import { DuckAvatar } from "@/components/duck/DuckAvatar";
 import { EnergyProgress } from "@/components/dashboard/EnergyProgress";
 import { DemoActions } from "@/components/dashboard/DemoActions";
+import { DuckSpeechBubble } from "@/components/duck/DuckSpeechBubble";
 import { logoutAccount } from "../auth/actions";
 import { requireUser } from "../auth/require-user";
 import { calculateDailyEnergy, computeDailySnapshot, DAILY_TARGET } from "@/features/scoring";
+import { selectSpeechBubble, getAnimationCue } from "@/features/speech";
 import type { HealthState, SeniorityLevel } from "@/features/scoring";
 
 export default async function DashboardPage() {
@@ -47,7 +49,6 @@ export default async function DashboardPage() {
     today,
   });
 
-  // Upsert today's snapshot so it's always current on page load
   await upsertDailySnapshot({
     userId: user.userId,
     date: todayStr,
@@ -64,6 +65,21 @@ export default async function DashboardPage() {
   const energy = calculateDailyEnergy(
     todayEvents.map((e) => ({ type: e.type, energyEarned: e.energyEarned })),
   );
+
+  const topTags = getTopTags(
+    sevenDayEvents.map((e) => ({ tags: (e.tags as string[]) ?? [], type: e.type })),
+  );
+
+  const speechContext = {
+    healthState: snapshotResult.healthState as HealthState,
+    seniorityLevel: snapshotResult.seniorityLevel as SeniorityLevel,
+    topTags,
+    energyToday: energy.total,
+    dailyTarget: DAILY_TARGET,
+  };
+
+  const speechBubble = selectSpeechBubble(speechContext);
+  const animationCue = getAnimationCue(speechContext);
 
   return (
     <main className="mx-auto flex min-h-screen max-w-4xl flex-col gap-8 px-6 py-12">
@@ -87,12 +103,16 @@ export default async function DashboardPage() {
       </section>
 
       <section className="rounded-3xl border border-slate-800 bg-slate-950 p-8">
-        <DuckAvatar
-          healthState={snapshotResult.healthState as HealthState}
-          seniorityLevel={snapshotResult.seniorityLevel as SeniorityLevel}
-        />
-        <div className="mt-6">
-          <EnergyProgress energyToday={energy.total} dailyTarget={DAILY_TARGET} />
+        <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+          <DuckAvatar
+            healthState={snapshotResult.healthState as HealthState}
+            seniorityLevel={snapshotResult.seniorityLevel as SeniorityLevel}
+            animationCue={animationCue}
+          />
+          <div className="flex-1 space-y-4">
+            <DuckSpeechBubble speech={speechBubble} animationCue={animationCue} />
+            <EnergyProgress energyToday={energy.total} dailyTarget={DAILY_TARGET} />
+          </div>
         </div>
       </section>
 
@@ -127,6 +147,19 @@ export default async function DashboardPage() {
       ) : null}
     </main>
   );
+}
+
+function getTopTags(events: { tags: string[]; type: string }[]): string[] {
+  const counts = new Map<string, number>();
+  for (const event of events) {
+    for (const tag of event.tags) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([tag]) => tag);
 }
 
 function startOfDay(date: Date): Date {
