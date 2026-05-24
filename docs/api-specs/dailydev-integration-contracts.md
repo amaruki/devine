@@ -1,9 +1,9 @@
 # daily.dev Integration API Contracts
 
-**Version:** 0.1.0  
-**Date:** 2026-05-23  
+**Version:** 1.0.0  
+**Date:** 2026-05-24  
 **Author:** Claude Code  
-**Status:** Draft  
+**Status:** Approved  
 **Phase:** Sprint 4
 
 ## Scope
@@ -13,6 +13,10 @@ Covers daily.dev token validation, token persistence, token revocation, connecte
 Serves: AC-03.01, AC-03.02, AC-03.03, AC-03.04, AC-03.05, AC-03.06, AC-03.07, AC-03.08, AC-03.09, AC-15.01, AC-15.02, AC-15.03, AC-15.04, AC-15.05, AC-17.01, AC-17.02, AC-17.03, AC-17.04, AC-17.05, AC-17.06, AC-17.07, AC-17.08, AC-17.09
 
 Sources: `../business/acceptance-criteria-breakdown/acceptance-criteria-sprint-4.md`, `../technical-specs/05-module-definitions.md`, `../technical-specs/06-data-model.md`, `../technical-specs/07-security.md`, `../technical-specs/08-non-functional-requirements.md`, `../technical-specs/10-integration-points.md`, `../technical-specs/12-dailydev-integration-strategy.md`
+
+## Prerequisites (AC-03.02)
+
+daily.dev Public API access requires an active [daily.dev Plus](https://daily.dev/plus) subscription. The Settings UI must explain this requirement so users understand why a token alone may not be sufficient. Without Plus, daily.dev returns `403` for authenticated endpoints even with a valid token.
 
 ## External daily.dev constraints
 
@@ -161,6 +165,26 @@ Rules:
 4. Preserves existing Devine-tracked events and snapshots.
 5. Creates `disconnect` audit event.
 6. Idempotent when no connection exists.
+
+## Token revocation guidance (AC-03.09)
+
+The Settings UI must display a reminder that users can revoke their daily.dev Personal Access Token at any time through [daily.dev API settings](https://daily.dev/settings/api-tokens). This guidance appears:
+
+1. After a successful token connection, as a reminder that the token can be revoked.
+2. When the user clicks "Disconnect", as confirmation that revoking on daily.dev is an additional step they may want to take.
+3. When a token becomes invalid, as a reminder that the old token may need revocation if it was compromised.
+
+## Later invalid token handling (AC-03.10)
+
+When a previously connected token fails validation during dashboard load or an authenticated API call:
+
+1. Return `degraded: true` with `fallbackReason: "token_invalid"`.
+2. Show a reconnect prompt in the UI with options to:
+   - Reconnect with a new token (navigate to Settings).
+   - Switch to demo mode (keep using Devine without daily.dev data).
+3. Preserve existing Devine-tracked state and any previously normalized events.
+4. Do not automatically delete the saved token. Let the user choose to disconnect or reconnect.
+5. The user remains in `connected` mode with a degraded state until they take action.
 
 ## Connected dashboard feed
 
@@ -317,8 +341,15 @@ type DailyDevFallback = {
     | "rate_limited"
     | "dailydev_unavailable"
     | "unsupported"
-    | "missing_fields";
+    | "missing_fields"
+    | "plus_required";
   userMessage: string;
+  retryAfter?: string;
+  rateLimitInfo?: {
+    limit: number;
+    remaining: number;
+    reset: string;
+  };
 };
 ```
 
@@ -328,3 +359,76 @@ Rules:
 2. Existing Devine-tracked state remains visible.
 3. Do not retry aggressively during live dashboard render.
 4. Do not log tokens, authorization headers, or raw response bodies that may contain secrets.
+
+## Rate-limit handling (AC-15.03, AC-15.04, AC-15.05)
+
+### HTTP 429 Response Processing
+
+When daily.dev returns `HTTP 429 Too Many Requests`:
+
+1. Read the `Retry-After` header (seconds) or `retryAfter` field from the response body.
+2. Store the retry timestamp and refuse new requests until that time has passed.
+3. Return `degraded: true` with `fallbackReason: "rate_limited"` and `retryAfter` ISO timestamp.
+4. Do not retry within the same request. Return the degraded state immediately.
+
+### Rate-limit Headers (AC-15.05)
+
+The API client must read and respect these headers when present:
+
+| Header                  | Purpose                                |
+| ----------------------- | -------------------------------------- |
+| `x-ratelimit-limit`     | Maximum requests per window.           |
+| `x-ratelimit-remaining` | Remaining requests in current window.  |
+| `x-ratelimit-reset`     | Unix timestamp when the window resets. |
+
+When `x-ratelimit-remaining` is low (≤ 5), log a warning and consider pre-emptive fallback to reduce user impact.
+
+### Rate-limit State
+
+```ts
+type RateLimitState = {
+  limited: boolean;
+  retryAfter: string | null;
+  limit: number | null;
+  remaining: number | null;
+  resetAt: string | null;
+};
+```
+
+## Endpoint assumptions and risks
+
+These endpoint paths are assumed based on daily.dev Public API documentation and must be verified when API access is available:
+
+| Endpoint                   | Method | Purpose                      | Risk Level |
+| -------------------------- | ------ | ---------------------------- | ---------- |
+| `GET /feeds/foryou`        | GET    | Personalized feed            | Medium     |
+| `GET /user`                | GET    | Profile details              | Low        |
+| `GET /bookmarks`           | GET    | User bookmarks               | Medium     |
+| `POST /bookmarks`          | POST   | Add bookmark                 | High       |
+| `DELETE /bookmarks/{id}`   | DELETE | Remove bookmark              | High       |
+| `GET /posts/{id}`          | GET    | Post details                 | Low        |
+| `GET /posts/{id}/comments` | GET    | Post comments                | Medium     |
+| `GET /search`              | GET    | Search posts/tags            | Medium     |
+| `GET /tech-stack`          | GET    | Tech stack tags              | Medium     |
+| `GET /user/history`        | GET    | Personal read/upvote history | High       |
+
+**Risk levels:**
+
+- **Low**: Documented in public API docs, high confidence.
+- **Medium**: Documented but pagination or field structure unverified.
+- **High**: May not exist, may require Plus, or may not return personal data.
+
+**Fallback for high-risk endpoints:** Use Devine-tracked events with `source: "in_app"` or `source: "manual"` instead of `dailydev_api`.
+
+## Downstream contract checklist
+
+| Backend card | Contracts consumed                                                                  |
+| ------------ | ----------------------------------------------------------------------------------- |
+| BE-S4-01     | `TestConnectionInput`, `DailyDevConnectionStatus`, token validation rules           |
+| BE-S4-02     | `disconnectDailyDev`, token revocation guidance, later invalid token handling       |
+| BE-S4-03     | `DailyDevPost`, `DailyDevPage`, pagination, rate-limit handling, all endpoint types |
+| BE-S4-04     | `RecordDailyDevActivityInput`, activity source normalization                        |
+| BE-S4-05     | `DailyDevFallback`, retry-after, rate-limit headers, degraded state handling        |
+| FE-S4-01     | `DailyDevConnectionStatus`, connection status UI, reconnect prompts                 |
+| FE-S4-02     | `DailyDevFallback`, degraded states, demo mode fallback                             |
+| FE-S4-03     | All contract types, end-to-end wiring validation                                    |

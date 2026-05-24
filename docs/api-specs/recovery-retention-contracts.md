@@ -1,16 +1,16 @@
 # Recovery and Retention API Contracts
 
-**Version:** 0.1.0  
-**Date:** 2026-05-23  
+**Version:** 1.0.0  
+**Date:** 2026-05-24  
 **Author:** Claude Code  
-**Status:** Draft  
+**Status:** Approved  
 **Phase:** Sprint 5
 
 ## Scope
 
 Covers share snapshot soft deletion, privacy-safe deleted public behavior, retention cleanup, production hardening checks, and optional email recovery scope.
 
-Serves: AC-14.06, AC-14.07, AC-14.08, AC-14.09, AC-14.10, AC-21.01, AC-21.02, AC-19.01, AC-19.02, AC-19.03, AC-19.04, AC-19.05
+Serves: AC-14.06, AC-14.07, AC-14.08, AC-14.09, AC-14.10, AC-19.01, AC-19.02, AC-19.03, AC-19.04, AC-19.05, AC-19.08, AC-21.01, AC-21.02
 
 Sources: `../business/acceptance-criteria-breakdown/acceptance-criteria-sprint-5.md`, `../technical-specs/05-module-definitions.md`, `../technical-specs/06-data-model.md`, `../technical-specs/07-security.md`, `../technical-specs/08-non-functional-requirements.md`, `../technical-specs/09-authentication-and-authorization.md`, `../technical-specs/14-share-snapshot-privacy-strategy.md`
 
@@ -95,9 +95,10 @@ type DeletedShareSnapshot = {
 Rules:
 
 1. Requires no session.
-2. Deleted snapshots render a safe deleted state.
-3. Deleted state does not reveal owner username, email, raw events, internal IDs, deletion actor, or private reason.
-4. Unknown and deleted public IDs may share the same public-facing page if product wants less enumeration risk.
+2. Soft-deleted snapshots return HTTP `410 Gone` with a branded deleted page.
+3. Unknown public IDs return HTTP `404 Not Found` with the same public shape as deletion (no enumeration signal).
+4. Deleted state does not reveal owner username, email, raw events, internal IDs, deletion actor, or private reason.
+5. The response body for both `404` and `410` is identical: `{ found: false, message: "This snapshot is no longer available." }`.
 
 ## Retention cleanup
 
@@ -216,9 +217,26 @@ Errors:
 | Target user not found    | `not_found`     |
 | Weak temporary password  | `weak_password` |
 
+## Retention policy (AC-14.09)
+
+MVP retention durations applied by `runRetentionCleanup`:
+
+| Table                     | Retention    | Notes                                               |
+| ------------------------- | ------------ | --------------------------------------------------- |
+| `activity_events`         | 180 days     | Preserves scoring recalc window.                    |
+| `daily_pet_snapshots`     | 90 days      | Daily aggregates; 90 days covers 12-week seniority. |
+| `share_snapshots`         | 90 days      | From `deleted_at`, not `created_at`.                |
+| `audit_events`            | 365 days     | Security and support minimum.                       |
+| `sessions`                | Auto-expire  | Sessions already expire at 7 days + token_version.  |
+| `active_power_up_effects` | After expiry | Consumed effects removed; stale effects cleaned up. |
+
+Active accounts (users who logged in within 90 days) are never deleted. Retention cleanup preserves `users`, `daily_dev_connections`, `power_up_inventory`, `quests`, and `demo_states` rows for active accounts.
+
 ## Production hardening contract
 
 Every endpoint and server action in this directory must satisfy these release checks.
+
+### Release safety checklist
 
 | Concern              | Required behavior                                                                                                      |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -230,3 +248,35 @@ Every endpoint and server action in this directory must satisfy these release ch
 | Health               | `GET /health` stays public, fast, and secret-free.                                                                     |
 | Reset-state          | Non-production only and absent in production.                                                                          |
 | Logging              | Logs redact credentials, tokens, raw comments, authorization headers, and encryption payload internals.                |
+
+### Production environment invariants
+
+| Invariant                            | Enforcement                                          |
+| ------------------------------------ | ---------------------------------------------------- |
+| `APP_ENV=production`                 | Set in Vercel production environment.                |
+| `ENABLE_RESET_API` absent or `false` | Reset route not registered.                          |
+| `RESET_STATE_SECRET` absent          | No reset bearer token accepted.                      |
+| `NODE_ENV=production`                | Next.js optimizations active.                        |
+| `Secure` cookie flag                 | `true` in production, `false` in development.        |
+| No debug logging                     | Error details logged server-side, not in responses.  |
+| `DAILYDEV_SERVER_TOKEN` optional     | Never used for personal data; fallback content only. |
+
+### US-21 recovery follow-up boundaries
+
+US-21 implementation is optional for Sprint 5. If not implemented, these boundaries apply:
+
+1. `requestAccountRecovery` returns the generic accepted message but takes no further action.
+2. `resetUserPassword` (superadmin-assisted) is the only password reset path.
+3. No email service integration exists. The `email` column on `users` is stored but unused for recovery.
+4. If US-21 is implemented post-MVP, the existing `requestAccountRecovery` contract supports email-based reset-link flow without contract changes.
+
+## Downstream contract checklist
+
+| Backend card | Contracts consumed                                                                   |
+| ------------ | ------------------------------------------------------------------------------------ |
+| BE-S5-01     | `SoftDeleteShareSnapshotInput/Result`, `DeletedShareSnapshot`, 404/410 HTTP behavior |
+| BE-S5-02     | `RetentionCleanupInput/Result`, retention policy table                               |
+| BE-S5-03     | `AccountRecoveryRequestInput/Result`, `ResetUserPasswordInput/Result`                |
+| BE-S5-04     | Production hardening checklist, environment invariants                               |
+| FE-S5-01     | `ShareSnapshotListItem`, deleted state UI, 410 page                                  |
+| FE-S5-02     | Recovery request UI, superadmin reset UI (if US-21 implemented)                      |
