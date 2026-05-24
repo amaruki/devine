@@ -17,12 +17,16 @@ export {
   ENERGY_VALUES,
   healthToState,
   normalizeTag,
+  processMissedDays,
   scoreToLevel,
 } from "./domain";
 export type {
   EnergyByType,
   EnergyResult,
   HealthResult,
+  MissedDayResult,
   ScoreBreakdown,
   SeniorityResult,
 } from "./domain";
+export { computeDailySnapshot } from "./application";
+export type { ComputeDailySnapshotInput, ComputeDailySnapshotResult } from "./application";

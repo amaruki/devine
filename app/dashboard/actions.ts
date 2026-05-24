@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "../auth/require-user";
 import { recordActivityWithDependencies } from "@/features/activity";
-import { calculateDailyEnergy, DAILY_TARGET } from "@/features/scoring";
+import { calculateDailyEnergy, computeDailySnapshot, DAILY_TARGET } from "@/features/scoring";
 import type { ActivityInput } from "@/features/activity";
 
 export async function applyDemoDashboardAction(
@@ -11,10 +11,11 @@ export async function applyDemoDashboardAction(
 ) {
   const user = await requireUser();
 
-  const [{ activityEventRepository }, { findLatestSnapshotByUser }] = await Promise.all([
-    import("@/lib/db/repositories/activity"),
-    import("@/lib/db/repositories/snapshot"),
-  ]);
+  const [{ activityEventRepository }, { findLatestSnapshotByUser, upsertDailySnapshot }] =
+    await Promise.all([
+      import("@/lib/db/repositories/activity"),
+      import("@/lib/db/repositories/snapshot"),
+    ]);
 
   const input: ActivityInput = {
     type: action,
@@ -30,16 +31,55 @@ export async function applyDemoDashboardAction(
   const deps = { events: activityEventRepository };
   const result = await recordActivityWithDependencies(user.userId, input, deps);
 
-  const todayStart = startOfDay(new Date());
-  const todayEnd = endOfDay(new Date());
-  const todayEvents = await activityEventRepository.findByUserAndDateRange(
-    user.userId,
-    todayStart,
-    todayEnd,
-  );
-  const energy = calculateDailyEnergy(todayEvents);
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const todayStart = startOfDay(today);
+  const todayEnd = endOfDay(today);
+  const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const snapshot = await findLatestSnapshotByUser(user.userId);
+  const [todayEvents, sevenDayEvents, latestSnapshot] = await Promise.all([
+    activityEventRepository.findByUserAndDateRange(user.userId, todayStart, todayEnd),
+    activityEventRepository.findByUserAndDateRange(user.userId, sevenDaysAgo, todayEnd),
+    findLatestSnapshotByUser(user.userId),
+  ]);
+
+  const previousHealth = latestSnapshot?.health ?? 62;
+  const lastSnapshotDate = latestSnapshot?.date ? new Date(latestSnapshot.date) : null;
+
+  const snapshotResult = computeDailySnapshot({
+    todayEvents: todayEvents.map((e) => ({
+      type: e.type,
+      energyEarned: e.energyEarned,
+      tags: (e.tags as string[]) ?? [],
+      occurredAt: new Date(e.occurredAt),
+    })),
+    sevenDayEvents: sevenDayEvents.map((e) => ({
+      type: e.type,
+      tags: (e.tags as string[]) ?? [],
+      occurredAt: new Date(e.occurredAt),
+    })),
+    previousHealth,
+    lastSnapshotDate,
+    today,
+  });
+
+  // Persist today's snapshot
+  await upsertDailySnapshot({
+    userId: user.userId,
+    date: todayStr,
+    energyEarned: snapshotResult.energyEarned,
+    health: snapshotResult.health,
+    healthState: snapshotResult.healthState,
+    seniorityScore: snapshotResult.seniorityScore,
+    seniorityLevel: snapshotResult.seniorityLevel,
+    scoreBreakdown: snapshotResult.scoreBreakdown,
+    completedQuests: latestSnapshot?.completedQuests ?? [],
+    powerUpsEarned: latestSnapshot?.powerUpsEarned ?? [],
+  });
+
+  const energy = calculateDailyEnergy(
+    todayEvents.map((e) => ({ type: e.type, energyEarned: e.energyEarned })),
+  );
 
   revalidatePath("/dashboard");
 
@@ -49,8 +89,8 @@ export async function applyDemoDashboardAction(
     energyEarned: result.status === "ok" ? result.event.energyEarned : 0,
     energyToday: energy.total,
     dailyTarget: DAILY_TARGET,
-    healthState: snapshot?.healthState ?? "stable",
-    seniorityLevel: snapshot?.seniorityLevel ?? "code_monkey",
+    healthState: snapshotResult.healthState,
+    seniorityLevel: snapshotResult.seniorityLevel,
   };
 }
 
