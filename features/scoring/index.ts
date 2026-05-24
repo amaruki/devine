@@ -5,6 +5,24 @@ export type SeniorityLevel =
   | "grounded_scholar"
   | "tech_philosopher";
 
-export function normalizeTag(tag: string) {
-  return tag.trim().toLowerCase();
-}
+export {
+  applyHealthChange,
+  calculateDailyEnergy,
+  calculateSeniorityScore,
+  computeHealthFromEvents,
+  DAILY_CAPS,
+  DAILY_TARGET,
+  DEEP_TECH_TAGS,
+  determineHealthChange,
+  ENERGY_VALUES,
+  healthToState,
+  normalizeTag,
+  scoreToLevel,
+} from "./domain";
+export type {
+  EnergyByType,
+  EnergyResult,
+  HealthResult,
+  ScoreBreakdown,
+  SeniorityResult,
+} from "./domain";
