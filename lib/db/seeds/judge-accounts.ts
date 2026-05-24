@@ -36,17 +36,21 @@ export async function seedJudgeDemoAccounts(): Promise<JudgeSeedResult> {
 
     const userId = existing[0].id;
 
-    await db
-      .insert(demoStates)
-      .values({ userId, persona, state: { path: "judge" } })
-      .onConflictDoUpdate({
-        target: demoStates.userId,
-        set: {
-          persona,
-          state: { path: "judge" },
-          updatedAt: new Date(),
-        },
-      });
+    await db.transaction(async (tx) => {
+      await tx.update(users).set({ persona, updatedAt: new Date() }).where(eq(users.id, userId));
+
+      await tx
+        .insert(demoStates)
+        .values({ userId, persona, state: { path: "judge" } })
+        .onConflictDoUpdate({
+          target: demoStates.userId,
+          set: {
+            persona,
+            state: { path: "judge" },
+            updatedAt: new Date(),
+          },
+        });
+    });
 
     await db.insert(auditEvents).values({
       actorUserId: null,

@@ -131,6 +131,23 @@ export const dailyPetSnapshots = pgTable(
   ],
 );
 
+export const demoStates = pgTable(
+  "demo_states",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id)
+      .unique(),
+    persona: text("persona").notNull().default("code_monkey"),
+    state: jsonb("state").notNull().default({}),
+    resetAt: timestamp("reset_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("demo_states_user_id_idx").on(table.userId)],
+);
+
 export const shareSnapshots = pgTable("share_snapshots", {
   id: uuid("id").primaryKey().defaultRandom(),
   publicId: text("public_id").notNull().unique(),
