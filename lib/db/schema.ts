@@ -165,3 +165,64 @@ export const shareSnapshots = pgTable("share_snapshots", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const powerUpInventory = pgTable(
+  "power_up_inventory",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    type: text("type").notNull(),
+    quantity: integer("quantity").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("power_up_inventory_user_id_idx").on(table.userId),
+    uniqueIndex("power_up_inventory_user_id_type_idx").on(table.userId, table.type),
+  ],
+);
+
+export const activePowerUpEffects = pgTable(
+  "active_power_up_effects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    type: text("type").notNull(),
+    appliesToAction: text("applies_to_action").notNull(),
+    multiplier: integer("multiplier").notNull().default(2),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("active_power_up_effects_user_id_idx").on(table.userId)],
+);
+
+export const quests = pgTable(
+  "quests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    questKey: text("quest_key").notNull(),
+    type: text("type").notNull(),
+    status: text("status").notNull().default("active"),
+    progress: integer("progress").notNull().default(0),
+    target: integer("target").notNull(),
+    rewardPowerUp: text("reward_power_up").notNull(),
+    dateScope: text("date_scope").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("quests_user_id_idx").on(table.userId),
+    uniqueIndex("quests_user_id_quest_key_date_scope_idx").on(
+      table.userId,
+      table.questKey,
+      table.dateScope,
+    ),
+  ],
+);

@@ -4,20 +4,26 @@ import { DemoActions } from "@/components/dashboard/DemoActions";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { DuckSpeechBubble } from "@/components/duck/DuckSpeechBubble";
 import { ShareSnapshot } from "@/components/dashboard/ShareSnapshot";
+import { QuestPanel } from "@/components/dashboard/QuestPanel";
 import { logoutAccount } from "../auth/actions";
 import { requireUser } from "../auth/require-user";
 import { calculateDailyEnergy, computeDailySnapshot, DAILY_TARGET } from "@/features/scoring";
 import { selectSpeechBubble, getAnimationCue } from "@/features/speech";
+import { getQuestState } from "@/features/quests";
 import type { HealthState, SeniorityLevel } from "@/features/scoring";
 
 export default async function DashboardPage() {
   const user = await requireUser();
 
-  const [{ activityEventRepository }, { findLatestSnapshotByUser, upsertDailySnapshot }] =
-    await Promise.all([
-      import("@/lib/db/repositories/activity"),
-      import("@/lib/db/repositories/snapshot"),
-    ]);
+  const [
+    { activityEventRepository },
+    { findLatestSnapshotByUser, upsertDailySnapshot },
+    { questRepository },
+  ] = await Promise.all([
+    import("@/lib/db/repositories/activity"),
+    import("@/lib/db/repositories/snapshot"),
+    import("@/lib/db/repositories/quest"),
+  ]);
 
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
@@ -67,6 +73,11 @@ export default async function DashboardPage() {
   const energy = calculateDailyEnergy(
     todayEvents.map((e) => ({ type: e.type, energyEarned: e.energyEarned })),
   );
+
+  const questState = await getQuestState(user.userId, snapshotResult.scoreBreakdown, {
+    quests: questRepository,
+    events: activityEventRepository,
+  });
 
   const topTags = getTopTags(
     sevenDayEvents.map((e) => ({ tags: (e.tags as string[]) ?? [], type: e.type })),
@@ -126,6 +137,8 @@ export default async function DashboardPage() {
         </p>
         <DemoActions />
       </section>
+
+      <QuestPanel quests={questState.quests} />
 
       <section className="rounded-3xl border border-slate-800 bg-slate-950 p-8">
         <h2 className="mb-4 text-lg font-semibold">Share your duck</h2>

@@ -29,6 +29,13 @@
       "when": 1779597000000,
       "tag": "0003_add_demo_states",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779634867484,
+      "tag": "0004_black_pet_avengers",
+      "breakpoints": true
     }
   ]
 }

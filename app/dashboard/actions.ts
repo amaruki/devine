@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "../auth/require-user";
 import { recordActivityWithDependencies } from "@/features/activity";
 import { calculateDailyEnergy, computeDailySnapshot, DAILY_TARGET } from "@/features/scoring";
+import { claimQuestReward, type ClaimQuestRewardResult } from "@/features/quests";
 import type { ActivityInput } from "@/features/activity";
 
 export async function applyDemoDashboardAction(
@@ -126,4 +127,26 @@ function getDemoTags(action: string): string[] {
     share: ["microservices", "devops"],
   };
   return tags[action] ?? ["programming"];
+}
+
+export async function claimQuestRewardAction(questId: string): Promise<ClaimQuestRewardResult> {
+  const user = await requireUser();
+
+  const [{ questRepository }, { inventoryRepository, createAuditEvent }] = await Promise.all([
+    import("@/lib/db/repositories/quest"),
+    import("@/lib/db/repositories/inventory"),
+  ]);
+
+  const [{ activityEventRepository }] = await Promise.all([
+    import("@/lib/db/repositories/activity"),
+  ]);
+
+  const deps = {
+    quests: questRepository,
+    events: activityEventRepository,
+    inventory: inventoryRepository,
+    createAuditEvent,
+  };
+
+  return claimQuestReward(user.userId, { questId }, deps);
 }
